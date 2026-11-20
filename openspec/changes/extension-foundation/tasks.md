@@ -4,17 +4,17 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 1. Project and builds
 
-- [ ] 1.1 Scaffold the project, both builds and the manifest test
+- [x] 1.1 Scaffold the project, both builds and the manifest test
   - tier: normal
   - files: `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `wxt.config.ts`, `vitest.config.ts`, `.gitignore`, `src/entrypoints/background.ts`, `src/entrypoints/branches.content.ts`, `tests/manifest.test.ts`
-  - deps: `wxt`, `typescript`, `vitest` (dev, versions fixed by the lockfile)
+  - deps: `wxt`, `typescript`, `vitest`, `@types/node` (dev, versions fixed by the lockfile)
   - reqs: REQ-EB-1, REQ-EB-2, REQ-EB-3, REQ-EB-4, REQ-HA-1
   - done:
-    - `package.json` has `"check": "tsc --noEmit && wxt build && wxt build -b firefox && vitest run"`; `wxt.config.ts` sets `srcDir: 'src'`, `manifestVersion: 3`, name `Twiggy`, `permissions: ['scripting']`, `host_permissions: ['https://github.com/*']`, `optional_host_permissions: ['https://*/*']` and, for Firefox, gecko id `twiggy@radaiko.dev` with `strict_min_version` `128.0`.
+    - `package.json` has `"check": "wxt prepare && tsc --noEmit && wxt build && wxt build -b firefox && vitest run"`; `wxt.config.ts` sets `srcDir: 'src'`, `manifestVersion: 3`, name `Twiggy`, `permissions: ['scripting']`, `host_permissions: ['https://github.com/*']`, `optional_host_permissions: ['https://*/*']` and, for Firefox, gecko id `twiggy@radaiko.dev` with `strict_min_version` `128.0`.
     - `src/entrypoints/branches.content.ts` is an empty content script with `matches: ['https://github.com/*']`; `src/entrypoints/background.ts` is an empty `defineBackground`.
     - `tests/manifest.test.ts` reads `.output/chrome-mv3/manifest.json` and `.output/firefox-mv3/manifest.json` and asserts every scenario of REQ-EB-2, REQ-EB-3, REQ-EB-4 and REQ-HA-1, including that the `js` file exists and that none of `tabs`, `webRequest`, `cookies`, `<all_urls>` appears.
     - Before writing, check `node -v` is 22 or later and `pnpm -v` prints; if not, stop. Confirm in MDN that Firefox 128 is the first with `optional_host_permissions`; if not, use the right version and say so.
-    - `pnpm install --frozen-lockfile && pnpm check` exits 0; adding `'tabs'` to the config makes it fail, then revert that.
+    - `pnpm check` (script: `wxt prepare && tsc --noEmit && wxt build && wxt build -b firefox && vitest run`; `prepare` generates the gitignored `.wxt/` types that `tsc` needs on a clean checkout) exits 0; adding `'tabs'` to the config makes it fail, then revert that.
 
 ## 2. Branch tree
 
