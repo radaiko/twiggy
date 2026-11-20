@@ -68,9 +68,9 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 5. Page activation
 
-- [ ] 5.1 Mark the branches page active
+- [x] 5.1 Mark the branches page active
   - tier: normal
-  - files: `src/lib/activate.ts`, `src/entrypoints/branches.content.ts`, `tests/activate.test.ts`, `tests/content-script-build.test.ts`, `package.json`, `pnpm-lock.yaml`
+  - files: `src/lib/activate.ts`, `src/entrypoints/branches.content.ts`, `tests/activate.test.ts`, `tests/content-script-build.test.ts`, `package.json`, `pnpm-lock.yaml`, `wxt.config.ts`
   - deps: `jsdom` (dev)
   - reqs: REQ-PA-2, REQ-PA-3, REQ-PA-4
   - done:
@@ -79,6 +79,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/activate.test.ts` (jsdom) has one test per scenario of REQ-PA-2 and REQ-PA-3, and one that compares the document's `outerHTML` apart from the attribute before and after.
     - `tests/content-script-build.test.ts` reads `.output/chrome-mv3/content-scripts/branches.js` and `.output/firefox-mv3/content-scripts/branches.js` and asserts neither contains `github.com` (REQ-PA-4).
     - `pnpm check` exits 0.
+    - Amended during implementation: `wxt.config.ts` was added to `files:`. WXT inlines the content-script definition into the bundle, so a literal `matches` puts `github.com` in the built file, which REQ-PA-4 forbids. The entry now uses `registration: 'runtime'` with `matches: []`, and `wxt.config.ts` emits the static github.com content script through the `build:manifestGenerated` hook so one built file serves both static and dynamic hosts.
 
 ## Workflow follow-up
 
