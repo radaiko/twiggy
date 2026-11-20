@@ -31,7 +31,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 3. Hosts and routes
 
-- [ ] 3.1 Normalise GHE host input
+- [x] 3.1 Normalise GHE host input
   - tier: normal
   - files: `src/lib/hosts.ts`, `tests/hosts.test.ts`
   - deps: none
@@ -41,7 +41,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/hosts.test.ts` covers every accepted and rejected input of REQ-HA-2 with the exact reason per input.
     - `pnpm check` exits 0.
 
-- [ ] 3.2 Recognise the branches path
+- [x] 3.2 Recognise the branches path
   - tier: trivial
   - files: `src/lib/route.ts`, `tests/route.test.ts`
   - deps: none
