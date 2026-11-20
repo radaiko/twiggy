@@ -21,6 +21,12 @@ Sanitized markup of each state is saved in `tests/fixtures/github/`: `vscode-all
 `vscode-all-end.html`, `vscode-active.html`, `vscode-search.html`,
 `vscode-search-empty.html`, `vscode-overview.html`.
 
+> **`vscode-all-end.html` is EDITED, not captured.** It is the real first page of `/all`
+> (markup and rows unchanged) with its own `Next` anchor hand-edited into the *inferred*
+> disabled-anchor end shape. No genuine last page could be captured (429 part way through the
+> walk); the one real last page observed had no pagination at all. Do not treat this file as
+> untouched evidence of GitHub's end state — see A4.
+
 ## A1 — Branch rows and where the full name is read
 
 `PRESENT`. A branch row is `tr[role="row"][data-component="Table.Row"]` inside
@@ -80,16 +86,27 @@ a[data-component="BranchName"][class="prc-BranchName-BranchName-CMTaU"] > div[cl
 
 Stated as host behaviour only: with scrolling unable to load rows, a collector that scrolls gets
 no new rows, and page 2+ is reached only by activating GitHub's own in-place `Next` control, which
-does not navigate away. See `openspec/changes/tree-view-pagination-signal/`.
+does not navigate away. The collection requirement therefore needs amending before collection code is
+written; the decision is pending with the human.
 
 ## A4 — End-of-results signal and scoped total
 
-`PRESENT — the pager's disabled Next anchor. Scoped total: ABSENT.`
+`OBSERVED — the pager disappears on the real last page. INFERRED — a disabled Next anchor.
+Scoped total: ABSENT.`
 
-- End signal, exactly: `a[data-component="Pagination.NextPage"][rel="next"]` without `href`
-  carrying `aria-hidden="true" aria-disabled="true"` — the same shape
-  `a[data-component="Pagination.PreviousPage"]` has on page 1. While more pages remain it has
-  `href="#<n>"` and no `aria-disabled`. `vscode-all-end.html` shows this state.
+**Observed on the real last page (`?page=28`)**: the document has **no pagination `nav` and no
+`Next` anchor at all**. That is the only end shape actually seen on a genuine last page.
+
+**Inferred, not observed**: a Next anchor that keeps its place but loses `href` and gains
+`aria-hidden="true" aria-disabled="true"` (the shape `a[data-component="Pagination.PreviousPage"]`
+has on page 1). This shape was never seen on a last page — the walk to page 28 was answered
+"Error 429" part way, and `vscode-all-end.html` is the saved **first** page of `/all` whose own
+Next anchor was hand-edited into this inferred shape.
+
+Consequence for later tasks: treat **pager absence** as the primary end evidence, and the
+disabled-anchor shape as a secondary signal that must also be accepted. Neither is proof on a
+view that renders no pager at all (A5/search), which is why a scoped total would be needed and is
+`ABSENT`.
 - `vscode-search.html` and `vscode-overview.html` have **no pagination `nav` at all**, so the
   absence of the pager is not by itself an end signal.
 - Scoped total: `ABSENT`. No element states how many branches the current view or search holds;

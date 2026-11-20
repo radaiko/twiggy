@@ -58,8 +58,9 @@ describe('research note', () => {
     expect(note).toMatch(/\*\*Native delete: `(confirmation-first|immediate without confirmation|ABSENT)`\.\*\*/);
   });
 
-  it('states the end-of-results finding', () => {
+  it('states the end-of-results finding and marks the inferred shape', () => {
     // @req REQ-BC-4
-    expect(note).toMatch(/^`PRESENT — the pager's disabled Next anchor\. Scoped total: ABSENT\.`$/m);
+    expect(note).toMatch(/^`OBSERVED — the pager disappears on the real last page\. INFERRED — a disabled Next anchor\./m);
+    expect(note).toMatch(/\*\*`vscode-all-end\.html` is EDITED, not captured\.\*\*/);
   });
 });
