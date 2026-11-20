@@ -18,7 +18,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 2. Branch tree
 
-- [ ] 2.1 Build the tree module
+- [x] 2.1 Build the tree module
   - tier: normal
   - files: `src/lib/branch-tree.ts`, `tests/branch-tree.test.ts`
   - deps: none
