@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readBuildOutput } from './build-output';
 
 type Manifest = {
   manifest_version: number;
@@ -18,14 +19,18 @@ type Manifest = {
 
 const builds = ['.output/chrome-mv3', '.output/firefox-mv3'];
 
-function readManifest(build: string): Manifest {
-  return JSON.parse(readFileSync(join(build, 'manifest.json'), 'utf8'));
+async function readManifestText(build: string): Promise<string> {
+  return readBuildOutput(build, 'manifest.json');
+}
+
+async function readManifest(build: string): Promise<Manifest> {
+  return JSON.parse(await readManifestText(build));
 }
 
 describe.each(builds)('%s', (build) => {
   // @req REQ-EB-2
-  it('is MV3 with a background entry whose file exists', () => {
-    const manifest = readManifest(build);
+  it('is MV3 with a background entry whose file exists', async () => {
+    const manifest = await readManifest(build);
     expect(manifest.manifest_version).toBe(3);
     expect(manifest.name).toBe('Twiggy');
     const files =
@@ -40,28 +45,28 @@ describe.each(builds)('%s', (build) => {
   });
 
   // @req REQ-EB-3
-  it('has a gecko id and a Firefox minimum version of at least 128.0', () => {
-    const gecko = readManifest(build).browser_specific_settings?.gecko;
+  it('has a gecko id and a Firefox minimum version of at least 128.0', async () => {
+    const gecko = (await readManifest(build)).browser_specific_settings?.gecko;
     expect(typeof gecko?.id).toBe('string');
     expect(gecko?.id?.length).toBeGreaterThan(0);
     expect(Number(gecko?.strict_min_version)).toBeGreaterThanOrEqual(128);
   });
 
   // @req REQ-EB-4
-  it('declares exactly the minimal permission set', () => {
-    const manifest = readManifest(build);
+  it('declares exactly the minimal permission set', async () => {
+    const manifest = await readManifest(build);
     expect(manifest.permissions).toEqual(['scripting']);
     expect(manifest.host_permissions).toEqual(['https://github.com/*']);
     expect(manifest.optional_host_permissions).toEqual(['https://*/*']);
-    const text = readFileSync(join(build, 'manifest.json'), 'utf8');
+    const text = await readManifestText(build);
     for (const forbidden of ['tabs', 'webRequest', 'cookies', '<all_urls>']) {
       expect(text).not.toContain(forbidden);
     }
   });
 
   // @req REQ-HA-1
-  it('has one content script matched to github.com whose file exists', () => {
-    const scripts = readManifest(build).content_scripts ?? [];
+  it('has one content script matched to github.com whose file exists', async () => {
+    const scripts = (await readManifest(build)).content_scripts ?? [];
     expect(scripts).toHaveLength(1);
     const [script] = scripts;
     expect(script?.matches).toEqual(['https://github.com/*']);
