@@ -36,20 +36,31 @@ export async function reconcile(api: RegistryApi): Promise<void> {
   const existing = new Set((await api.scripting.getRegisteredContentScripts()).map((script) => script.id));
 
   const toRegister = [...wanted].filter((id) => !existing.has(id));
-  const toUnregister = [...existing].filter((id) => !wanted.has(id));
+  const toUnregister = [...existing].filter((id) => id.startsWith(ID_PREFIX) && !wanted.has(id));
 
-  if (toRegister.length > 0) {
-    await api.scripting.registerContentScripts(
-      toRegister.map((id) => ({
-        id,
-        matches: [id.slice(ID_PREFIX.length)],
-        js: [SCRIPT_FILE],
-        runAt: 'document_idle' as const,
-        persistAcrossSessions: true as const,
-      })),
-    );
-  }
+  // Revoke first, and independently of the register step, so stale access never outlives a failure.
+  let failure: unknown;
   if (toUnregister.length > 0) {
-    await api.scripting.unregisterContentScripts({ ids: toUnregister });
+    try {
+      await api.scripting.unregisterContentScripts({ ids: toUnregister });
+    } catch (error) {
+      failure = error;
+    }
   }
+  if (toRegister.length > 0) {
+    try {
+      await api.scripting.registerContentScripts(
+        toRegister.map((id) => ({
+          id,
+          matches: [id.slice(ID_PREFIX.length)],
+          js: [SCRIPT_FILE],
+          runAt: 'document_idle' as const,
+          persistAcrossSessions: true as const,
+        })),
+      );
+    } catch (error) {
+      failure ??= error;
+    }
+  }
+  if (failure !== undefined) throw failure;
 }
