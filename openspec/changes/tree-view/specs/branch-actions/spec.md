@@ -66,15 +66,19 @@ Rename SHALL invoke or reveal GitHub's native rename affordance for that branch,
 - **THEN** the switch is turned off, the native list is visible and the native control is activated or focused
 
 ### Requirement: REQ-BA-6 Delete never mutates from the menu
-Delete SHALL NOT delete a branch and SHALL NOT bypass a native warning or confirmation. If the verified native delete control opens GitHub's own confirmation before any mutation, Delete MAY activate it. Otherwise Delete SHALL reveal the native row, scroll and focus it, and leave the choice to the user. Which case holds on GitHub is recorded in `docs/research/github-branches-markup.md`; when the research does not prove a confirmation exists, the reveal-only case applies.
+Delete SHALL map to the exact branch's current native affordance discovered at runtime. If it asks for confirmation before mutation, Twiggy MAY reveal or invoke it; the user confirms in GitHub's own dialog. For immediate deletion without confirmation, Twiggy MUST NOT invoke it: only reveal, scroll to and focus the native row for the user to click GitHub's control. Unknown behaviour SHALL also be reveal-only. Twiggy SHALL NOT delete, confirm or bypass a native warning.
 
 #### Scenario: Confirmation-first native delete
-- **WHEN** the research records a native confirmation and Delete is chosen
-- **THEN** only the native control that opens that confirmation is activated, and no branch is removed by Twiggy
+- **WHEN** runtime inspection of the exact branch's current native row establishes that its delete affordance opens GitHub's confirmation before mutation and Delete is chosen
+- **THEN** Twiggy reveals or invokes that affordance, the user must confirm in GitHub's own dialog, and Twiggy neither confirms nor removes the branch
 
 #### Scenario: Immediate native delete
-- **WHEN** the research records that the native control deletes immediately
-- **THEN** choosing Delete reveals and focuses the native row and activates nothing
+- **WHEN** the exact branch's current native row offers a delete control that deletes immediately without confirmation and Delete is chosen
+- **THEN** Twiggy only reveals, scrolls to and focuses that row, invokes no delete control, and leaves the user to click GitHub's own control
+
+#### Scenario: Confirmation behaviour is unknown
+- **WHEN** runtime inspection cannot establish that the current delete affordance asks for confirmation before mutation
+- **THEN** Delete only reveals, scrolls to and focuses the native row and invokes no delete control, even if the research note recorded confirmation-first behaviour
 
 ### Requirement: REQ-BA-7 Unavailable actions
 An entry whose native control is missing or not permitted SHALL be disabled and carry the description "Not available in GitHub for this branch." The menu SHALL NOT suggest that the extension can grant rights.

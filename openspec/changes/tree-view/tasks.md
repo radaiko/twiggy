@@ -1,5 +1,7 @@
 # Tasks
 
+**Hard dependency:** Every task requires `extension-foundation` to be merged first. `src/` exists only after that change's task 1.1; no task here scaffolds it.
+
 Every done bar ends with `pnpm check` exiting 0. A task touches only the files it lists. Tasks run in order, one at a time. All tasks assume `extension-foundation` is merged (its scripts, `buildTree`, `isBranchesPath`, `activate`, jsdom); if `pnpm check` does not already pass on a clean checkout, stop. Unit tests never use the network; they read fixtures from `tests/fixtures/github/`. The contract for every UI string, size and behaviour is `docs/design/tree-view.md`; copy strings are taken from it verbatim.
 
 ## 1. Verify and prepare
@@ -12,6 +14,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
   - done:
     - In a real browser, logged out (no credential, no API), open `https://github.com/microsoft/vscode/branches`, its `/all` and `/active` views, and a committed native search on `/all`. If no real browser is available, stop; a fetched static HTML is not evidence because the list is lazy.
     - `docs/research/github-branches-markup.md` records, for each of the following, the observed fact with the exact selector or attribute, the date and GitHub's visible state, or the word `ABSENT`: (A1) identifiable branch rows and where the full branch name is read; (A2) the native view tabs and committed search query, and how both are detected on Turbo navigation; (A3) how more rows load (infinite scroll, viewport-triggered "load more", or navigation pagination) and which element scrolls (window or a container); (A4) an end-of-results signal and/or a scoped total, exactly where; (A5) the native empty state; (A6) the native compare, rename and delete controls per row, where they live (row, hidden menu or branch page) and whether delete asks for confirmation before removing or removes immediately; (A7) the native default and protected badge markup; (A8) whether the overview page has separate result sections and their headings; (A9) a node that is hidden with `hidden`/`inert` without breaking GitHub's own scripts; (A10) measured rows per load, load latency, and a recommended step wait and stall limit for `collector.ts`; (A11) the results region and the position after the native search and filters where a toolbar can go; (A12) any difference observed on a GitHub Enterprise Server host, or "no GHE host available".
+    - The A6 finding explicitly states `confirmation-first`, `immediate without confirmation`, or `ABSENT` for native delete, with the observed control and confirmation behaviour (or lack of an available control). This evidence informs implementation but does not replace runtime inspection of the current row under REQ-BA-6.
     - Stop and report, without writing later tasks' code, if A3 shows scrolling cannot trigger loading, or A1 shows no row exposes the full branch name. State the concrete host behaviour.
     - `tests/fixtures/github/` holds sanitized saved markup, one file per state: `vscode-all-first.html`, `vscode-all-end.html` (last loaded state with the end signal, or the nearest state if A4 is ABSENT), `vscode-active.html`, `vscode-search.html`, `vscode-search-empty.html`, `vscode-overview.html`. Sanitized means: scripts removed, no `authenticity_token`, CSRF value, cookie, session id, user login or avatar URL, and each file under 1 MB.
     - `tests/fixtures.test.ts` asserts every listed file exists, is non-empty and under 1 MB, and contains none of `authenticity_token`, `csrf`, `_gh_sess`, `Bearer`, `<script`.
@@ -66,7 +69,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
   - deps: none
   - reqs: REQ-BC-2, REQ-BC-3, REQ-BC-4, REQ-BC-5, REQ-BC-7, REQ-BC-8, REQ-BC-9, REQ-BC-11
   - done:
-    - `collector.ts` exports `createCollector(ports)` with `start()`, `stop('button')`, `cancel()`, `resume()`, `subscribe`, and a state `{ status: 'idle'|'collecting'|'complete'|'partial', rows, reason?, proof? }`. Ports are `readRows`, `readCompletion`, `step`, `isManualScroll`, `wait`; the file imports no DOM and uses no timer of its own. Reasons: `manual-scroll`, `stop-button`, `site-access`, `stalled`. Stall limit and step count constants use the values from research A10.
+    - `collector.ts` exports `createCollector(ports)` with `start()`, `stop('button')`, `cancel()`, `resume()`, `subscribe`, and a state `{ status: 'idle'|'collecting'|'complete'|'partial', rows, reason?, proof? }`. Ports are `readRows`, `readCompletion`, `step`, `isManualScroll`, `wait`; the file imports no DOM and uses no timer of its own. Reasons: `manual-scroll`, `stop-button`, `stalled`. Stall limit and step count constants use the values from research A10.
     - `tests/collector.test.ts` with fake ports asserts: initial rows read before the first `step`; rows deduplicated per section; complete only with each of the three proofs and the proof is named; no new rows for the stall limit gives `partial: stalled` and never `complete`; `isManualScroll` true before a step ends `partial: manual-scroll` with no further `step`; `stop('button')` gives `partial: stop-button`; `cancel()` discards rows and ends `idle`; `resume()` keeps rows and continues; a pending step result arriving after `cancel()` is ignored; a native error indicator seen through the ports ends `partial: stalled`.
     - `pnpm check` exits 0.
 
@@ -141,7 +144,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
   - reqs: REQ-TB-6, REQ-BC-5, REQ-BC-6, REQ-BC-9, REQ-TS-1, REQ-TS-2, REQ-BA-8
   - done:
     - `status.ts` exports `renderCollecting`, `renderPartial(reason, n)`, `renderEmpty({ hasQuery })`, `renderUnsupported`, `renderHandoffStale({ name, rowGone })`.
-    - `tests/ui-status.test.ts` (jsdom) asserts every scenario of REQ-TB-6 (four strings, pinned, no `%`), REQ-BC-5 (no dismiss control, "collected" wording, no "Collection complete"), REQ-BC-6 (reason per cause), REQ-BC-9 (site-access retry disabled with its text), REQ-TS-1 (both variants, no new-branch button) and REQ-BA-8 (both stale texts with the exact branch name).
+    - `tests/ui-status.test.ts` (jsdom) asserts every scenario of REQ-TB-6 (four strings, pinned, no `%`), REQ-BC-5 (no dismiss control, "collected" wording, no "Collection complete"), REQ-BC-6 (reason per cause), that REQ-BC-9's retry action is offered for each partial reason, REQ-TS-1 (both variants, no new-branch button) and REQ-BA-8 (both stale texts with the exact branch name).
     - `pnpm check` exits 0.
 
 - [ ] 5.4 Tree rows
@@ -180,8 +183,8 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
   - deps: none
   - reqs: REQ-BA-3, REQ-BA-4, REQ-BA-5, REQ-BA-6, REQ-BA-7, REQ-BA-8, REQ-BA-9
   - done:
-    - `native-actions.ts` exports `availability(doc, fullName)` returning per-entry `enabled | unavailable`, and `perform(doc, fullName, entry, deps)` which turns the switch off through `deps`, then compares, renames or deletes per `design.md` decision 7 using the research note (A6): Delete clicks a native control only if the note records a confirmation before removal, otherwise reveals, scrolls to and focuses the native row. It looks the row up with `findNativeRow` on every call and returns `{ ok: false, reason: 'control-lost' | 'row-gone' }` instead of guessing.
-    - `tests/native-actions.test.ts` (jsdom, fixtures) asserts every scenario of REQ-BA-3 to REQ-BA-9, including that no element is clicked when the note says delete is immediate, no URL is constructed when there is no compare destination, and no `fetch` is called.
+    - `native-actions.ts` exports `availability(doc, fullName)` returning per-entry `enabled | unavailable`, and `perform(doc, fullName, entry, deps)` which turns the switch off through `deps`, then hands off per `design.md` decision 7. Delete inspects the current native affordance at runtime: only established confirmation-first behaviour permits revealing or invoking it, and confirmation remains the user's action in GitHub's dialog. Immediate or unknown behaviour only reveals, scrolls to and focuses the row and never invokes delete. Research A6 is evidence, not runtime authority. It looks the row up with `findNativeRow` on every call and returns `{ ok: false, reason: 'control-lost' | 'row-gone' }` instead of guessing.
+    - `tests/native-actions.test.ts` (jsdom, fixtures) asserts every scenario of REQ-BA-3 to REQ-BA-9, including confirmation-first handoff without confirming GitHub's dialog, no delete invocation for immediate behaviour, reveal-only for unknown behaviour even when research recorded confirmation-first, no URL constructed without a compare destination, and no `fetch` called.
     - `pnpm check` exits 0.
 
 - [ ] 5.8 Actions menu
@@ -196,17 +199,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 6. Wiring
 
-- [ ] 6.1 Site-access probe
-  - tier: normal
-  - files: `src/lib/site-access.ts`, `src/entrypoints/background.ts`, `tests/site-access.test.ts`
-  - deps: none
-  - reqs: REQ-BC-6
-  - done:
-    - `site-access.ts` exports `answerProbe(api, origin)` for the background (uses `permissions.contains` with an injected API) and `askProbe(runtime)` for the content script returning `'granted' | 'denied' | 'unknown'`; `background.ts` registers a `runtime.onMessage` handler for it without removing any foundation handler.
-    - `tests/site-access.test.ts` uses fake APIs and asserts granted, denied, and `unknown` when no answer arrives, and that `unknown` never maps to the site-access reason.
-    - `pnpm check` exits 0.
-
-- [ ] 6.2 Mount, hook and content script
+- [ ] 6.1 Mount, hook and content script
   - tier: hard
   - files: `src/ui/mount.ts`, `src/entrypoints/branches.content.ts`, `tests/ui-mount.test.ts`
   - deps: none
@@ -217,7 +210,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - The built `content-scripts/branches.js` still contains no `github.com` (the existing test must stay green).
     - `pnpm check` exits 0.
 
-- [ ] 6.3 End-to-end behaviour and no-network guard
+- [ ] 6.2 End-to-end behaviour and no-network guard
   - tier: normal
   - files: `tests/tree-view-e2e.test.ts`, `tests/no-network.test.ts`
   - deps: none

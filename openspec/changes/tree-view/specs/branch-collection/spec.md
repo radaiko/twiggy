@@ -86,15 +86,11 @@ Any collection that did not end `complete` SHALL be shown as partial: a persiste
 - **THEN** it does not contain "Collection complete" and the scope text uses "collected", not "branches ·"
 
 ### Requirement: REQ-BC-6 Partial reasons
-A partial collection SHALL carry exactly one reason with the contract's text: manual scroll "Collection stopped when you scrolled. More branches may be missing."; stop button "You stopped collection. More branches may be missing."; site access, only when a negative probe is known, "Site access is unavailable. Twiggy could not finish collecting branches."; stalled or unknown end "GitHub did not load more branches. Twiggy could not confirm this view is complete."
+A partial collection SHALL carry exactly one reason with the contract's text: manual scroll "Collection stopped when you scrolled. More branches may be missing."; stop button "You stopped collection. More branches may be missing."; stalled or unknown end "GitHub did not load more branches. Twiggy could not confirm this view is complete."
 
 #### Scenario: Reason per cause
-- **WHEN** collection ends by manual scroll, by the stop button, by a negative site-access probe and by a stall
+- **WHEN** collection ends by manual scroll, by the stop button and by a stall
 - **THEN** each shows its own text above
-
-#### Scenario: No claim without knowledge
-- **WHEN** no site-access probe has answered
-- **THEN** the site-access reason is never shown
 
 ### Requirement: REQ-BC-7 Manual scroll interrupts
 Wheel, touch, scrollbar dragging and page-scroll keys SHALL be treated as the user's, not collection's. Collection SHALL stop before its next automatic movement, end partial with reason manual scroll, and not restore the scroll position over the user's.
@@ -123,15 +119,11 @@ The "Stop collecting" button SHALL end collection as partial with the stop reaso
 - **THEN** the rows collected for `all` are not shown and collection restarts for `stale`
 
 ### Requirement: REQ-BC-9 Retry resumes the same scope
-"Try collecting again" SHALL resume collection for the same scope, keep captured rows, deduplicate against them, visibly enter the collecting state and keep expansion state. When the reason is site access the button SHALL be disabled with the text "Restore site access in your browser, then reload this page."
+"Try collecting again" SHALL resume collection for the same scope, keep captured rows, deduplicate against them, visibly enter the collecting state and keep expansion state.
 
 #### Scenario: Retry keeps rows
 - **WHEN** a partial tree with 100 branches is retried and the list yields 20 new rows
 - **THEN** the count is 120 and previously expanded folders are still expanded
-
-#### Scenario: Retry is disabled without access
-- **WHEN** the reason is site access
-- **THEN** the retry button is disabled and the restore text is shown
 
 ### Requirement: REQ-BC-10 Collection moves neither focus nor the user's position
 Automated scrolling SHALL NOT move keyboard focus or the search input's focus. The pre-collection anchor SHALL be captured at start and restored on completion or button stop, unless the user scrolled.

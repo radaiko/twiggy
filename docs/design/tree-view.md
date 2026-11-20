@@ -132,9 +132,8 @@ When stopped, present the collected tree immediately with a persistent, non-dism
 - Title: **“Partial tree — {n} branches collected”**.
 - Manual scroll reason: **“Collection stopped when you scrolled. More branches may be missing.”**
 - Stop button reason: **“You stopped collection. More branches may be missing.”**
-- Permission reason, only when known: **“Site access is unavailable. Twiggy could not finish collecting branches.”**
 - Native loading stalled/unknown end: **“GitHub did not load more branches. Twiggy could not confirm this view is complete.”**
-- Actions: **“Try collecting again”**, **“Show GitHub list”**. The latter sets the switch off. Retry resumes the same scope, deduplicates captured rows, visibly enters collection again, and does not erase collapsed state. Permission-denied retry is disabled with **“Restore site access in your browser, then reload this page.”** No inline host-grant flow.
+- Actions: **“Try collecting again”**, **“Show GitHub list”**. The latter sets the switch off. Retry resumes the same scope, deduplicates captured rows, visibly enters collection again, and does not erase collapsed state. No inline host-grant flow or permission probe.
 - Never use “all”, “complete”, “no matches” or an empty success state for an unconfirmed partial set. If zero rows were collected, retain this partial/error panel and offer the native fallback; do not render an empty tree as zero branches.
 
 If permission removal prevents the content script from running at all, no extension UI can reliably appear; the browser's native permission UI is authoritative. Do not promise an injected permission warning in that situation.
