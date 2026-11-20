@@ -29,6 +29,14 @@ Early development — scaffolding only.
 - **Hosts:** `github.com` plus self-hosted GHE domains.
 - **Surface:** the repository branches view.
 
+## Principles
+
+- **No credentials.** Twiggy never asks for a personal access token, a GitHub
+  App or an OAuth client, and stores nothing about your account. It reads the
+  pages you are already signed in to, using the permissions your browser grants
+  per host.
+- **Forkable.** MIT licensed — fork it, change it, ship it.
+
 ## Licence
 
-Not yet chosen.
+MIT — see [LICENSE](LICENSE).

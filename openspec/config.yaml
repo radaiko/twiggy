@@ -1,0 +1,12 @@
+schema: spec-driven
+
+context: |
+  Twiggy: a browser extension (Firefox and Chromium: Chrome, Edge, Brave) that turns the repository branches view of github.com and GitHub Enterprise Server into a folder tree.
+  TypeScript, WXT, pnpm, Vitest. One MV3 codebase; Firefox differs only in manifest fields generated at build time.
+  Check command: `pnpm check`. Every task names the files it may touch and the tests it adds.
+  Public repository on GitHub (radaiko/twiggy), mirrored read-only to Forgejo. No secrets in files.
+
+rules:
+  tasks:
+    - Each task states tier, files, deps, reqs and a done bar that ends with `pnpm check`
+    - A task adds or changes only the files it lists
