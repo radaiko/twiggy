@@ -112,10 +112,6 @@ view that renders no pager at all (A5/search), which is why a scoped total would
 - Scoped total: `ABSENT`. No element states how many branches the current view or search holds;
   the only numbers are per-row metadata ("43 / 63" updated counts, ahead/behind) and sidebar
   counts of other resources.
-- On `/all` the Next anchor is really disabled only on the last page (`?page=28` observed reaching
-  a document with no `Next` anchor). The walk to it was rate-limited part way and answered
-  "Error 429"; `vscode-all-end.html` is therefore the saved first page of `/all` (its own markup
-  and rows, unchanged) with its own Next anchor set to the end state above.
 
 ## A5 — Native empty state
 

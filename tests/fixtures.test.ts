@@ -62,5 +62,7 @@ describe('research note', () => {
     // @req REQ-BC-4
     expect(note).toMatch(/^`OBSERVED — the pager disappears on the real last page\. INFERRED — a disabled Next anchor\./m);
     expect(note).toMatch(/\*\*`vscode-all-end\.html` is EDITED, not captured\.\*\*/);
+    // The inferred shape must never be restated as an observed fact.
+    expect(note).not.toMatch(/really disabled/);
   });
 });
