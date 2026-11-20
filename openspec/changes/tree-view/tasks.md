@@ -6,7 +6,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 1. Verify and prepare
 
-- [ ] 1.1 Verify the design's assumptions against live markup and save fixtures
+- [x] 1.1 Verify the design's assumptions against live markup and save fixtures
   - tier: hard
   - files: `docs/research/github-branches-markup.md`, `tests/fixtures/github/*.html`, `tests/fixtures.test.ts`
   - deps: none
