@@ -3,6 +3,17 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
+  hooks: {
+    'build:manifestGenerated': (_wxt, manifest) => {
+      manifest.content_scripts = [
+        {
+          matches: ['https://github.com/*'],
+          js: ['content-scripts/branches.js'],
+          run_at: 'document_idle',
+        },
+      ];
+    },
+  },
   manifest: {
     name: 'Twiggy',
     permissions: ['scripting'],
