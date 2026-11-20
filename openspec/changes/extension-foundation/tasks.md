@@ -53,7 +53,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 4. Host registration
 
-- [ ] 4.1 Reconcile content-script registrations with granted origins
+- [x] 4.1 Reconcile content-script registrations with granted origins
   - tier: hard
   - files: `src/lib/host-registry.ts`, `src/entrypoints/background.ts`, `tests/host-registry.test.ts`
   - deps: none
