@@ -20,7 +20,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/fixtures.test.ts` asserts every listed file exists, is non-empty and under 1 MB, and contains none of `authenticity_token`, `csrf`, `_gh_sess`, `Bearer`, `<script`.
     - `pnpm check` exits 0.
 
-- [ ] 1.2 Establish DESIGN.md from the contract
+- [x] 1.2 Establish DESIGN.md from the contract
   - tier: trivial
   - files: `docs/design/DESIGN.md`
   - deps: none
