@@ -71,7 +71,6 @@ export function openMenu(
     item.setAttribute('aria-disabled', String(unavailable));
     item.tabIndex = -1;
     const label = doc.createElement('span');
-    label.className = 'twiggy-actions-menu-label';
     label.textContent = LABELS[entry];
     item.append(label);
     if (unavailable) {
@@ -95,7 +94,7 @@ export function openMenu(
   // The first enabled entry receives focus (REQ-BA-1).
   enabled()[0]?.focus();
 
-  // The trigger's own click closes the menu it opened, instead of opening it again.
+  // Registered so the trigger's own activation closes this menu instead of opening another.
   const self: Open = {
     close: (focus) => {
       if (focus) trigger.focus();
@@ -104,6 +103,7 @@ export function openMenu(
       closed = true;
     },
   };
+  openMenus.set(trigger, self);
 
   // REQ-BA-1: a chosen entry is only reported; the menu never acts on it.
   function choose(entry: Entry, unavailable: boolean): void {
@@ -123,7 +123,7 @@ export function openMenu(
     doc.removeEventListener('pointerdown', onPointerDown, true);
     trigger.removeEventListener('keydown', onTriggerKey);
     trigger.removeAttribute('aria-expanded');
-    if (openOf(trigger)?.close === self.close) openMenus.delete(trigger);
+    if (openOf(trigger) === self) openMenus.delete(trigger);
   }
 
   function onKey(event: KeyboardEvent): void {

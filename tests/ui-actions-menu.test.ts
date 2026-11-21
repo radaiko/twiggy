@@ -403,3 +403,15 @@ describe('no invented forms', () => {
     expect(whole.textContent).not.toMatch(/are you sure|confirm|branches to compare/i);
   });
 });
+
+describe('menu lifetime', () => {
+  // @req REQ-BA-1
+  it('a second activation of the trigger closes the open menu instead of opening another', () => {
+    const el = renderedTree();
+    const trigger = el.querySelector<HTMLElement>('button[aria-haspopup="menu"]')!;
+    trigger.click();
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
+    trigger.click();
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(0);
+  });
+});
