@@ -118,7 +118,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 5. Interface
 
-- [ ] 5.1 Stylesheet
+- [x] 5.1 Stylesheet
   - tier: normal
   - files: `src/ui/styles.css`, `tests/styles.test.ts`
   - deps: none
@@ -128,7 +128,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/styles.test.ts` reads the file and asserts those declarations, no `@import`, no `url(` to a remote host, no `font-face`, and the only `transition` is on the collection icon.
     - `pnpm check` exits 0.
 
-- [ ] 5.2 Toolbar
+- [x] 5.2 Toolbar
   - tier: normal
   - files: `src/ui/toolbar.ts`, `tests/ui-toolbar.test.ts`
   - deps: none
@@ -138,7 +138,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/ui-toolbar.test.ts` (jsdom) asserts every scenario of REQ-TB-2, REQ-TB-3, REQ-TB-4, REQ-TB-5 and REQ-TB-7 (silent count updates, one completion announcement, no banner), that the toolbar has no input other than the switch, and that handlers fire.
     - `pnpm check` exits 0.
 
-- [ ] 5.3 Status strips and empty states
+- [x] 5.3 Status strips and empty states
   - tier: normal
   - files: `src/ui/status.ts`, `tests/ui-status.test.ts`
   - deps: none
@@ -158,7 +158,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/ui-tree.test.ts` (jsdom) asserts every scenario of REQ-TR-1 to REQ-TR-4, REQ-TR-9, REQ-TR-10 and REQ-TA-1, including a 1000-branch fixture with 40 prefixes and a name containing markup characters.
     - `pnpm check` exits 0.
 
-- [ ] 5.5 Pure keyboard navigation
+- [x] 5.5 Pure keyboard navigation
   - tier: normal
   - files: `src/lib/tree-nav.ts`, `tests/tree-nav.test.ts`
   - deps: none
@@ -178,7 +178,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/ui-tree-keyboard.test.ts` (jsdom) asserts every scenario of REQ-TA-2, REQ-TA-3, REQ-TA-4 and REQ-TA-5 through dispatched key events, including the one-tab-stop count with 100 rows and no global key listener on `document`.
     - `pnpm check` exits 0.
 
-- [ ] 5.7 Native action handoff
+- [x] 5.7 Native action handoff
   - tier: hard
   - files: `src/lib/native-actions.ts`, `tests/native-actions.test.ts`
   - deps: none
