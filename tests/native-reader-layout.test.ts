@@ -6,15 +6,28 @@ import { readScope, recognizeLayout } from '../src/lib/native-reader';
 
 const fixtures = join(__dirname, 'fixtures', 'github');
 
-function load(name: string): Document {
-  // A committed query carried into the Active view, derived from the saved search page.
-  const activeQuery = readFileSync(join(fixtures, 'vscode-search.html'), 'utf8')
+function source(name: string): string {
+  return readFileSync(join(fixtures, name), 'utf8');
+}
+
+// The saved search page retargeted at the Active view, so a query on a second view has a fixture.
+function searchInActive(): string {
+  const html = source('vscode-search.html')
     .replace('/microsoft/vscode/branches/all" data-discover', '/microsoft/vscode/branches/active" data-discover')
     .replace('All branches', 'Active branches');
-  const source = name === 'search-in-active'
-    ? activeQuery
-    : readFileSync(join(fixtures, name), 'utf8');
-  return new DOMParser().parseFromString(source, 'text/html');
+  if (html === source('vscode-search.html')) throw new Error('search-in-active fixture is unchanged');
+  if (!html.includes('href="/microsoft/vscode/branches/active" data-discover')) {
+    throw new Error('search-in-active fixture has no Active tab');
+  }
+  if (!html.includes('Active branches')) throw new Error('search-in-active fixture has no Active title');
+  return html;
+}
+
+function load(name: string): Document {
+  return new DOMParser().parseFromString(
+    name === 'search-in-active' ? searchInActive() : source(name),
+    'text/html',
+  );
 }
 
 const files = [
@@ -36,19 +49,36 @@ describe('recognizeLayout', () => {
     expect(layout.region.getAttribute('aria-label')).toBe('Branches');
     expect(layout.region.isConnected).toBe(true);
     expect(layout.toolbarAnchor.parentElement).not.toBeNull();
+    expect(layout.toolbarAnchor.ownerDocument).toBe(doc);
+    expect(layout.region.ownerDocument).toBe(doc);
+  });
+
+  // @req REQ-TR-11
+  it.each(files)('finds the results region after the native search in %s', (file) => {
+    const doc = load(file);
+    const layout = recognizeLayout(doc);
+    expect(layout.ok).toBe(true);
+    if (!layout.ok) return;
     const search = doc.querySelector('search');
     expect(search).not.toBeNull();
-    for (const node of [layout.region, layout.toolbarAnchor, search!] as Element[]) {
-      expect(node.ownerDocument).toBe(doc);
-    }
-    const order = [search!, layout.toolbarAnchor, layout.region].filter(
-      (node, index, all) => all.indexOf(node) === index,
-    );
-    for (let i = 1; i < order.length; i += 1) {
-      expect(order[i - 1]!.compareDocumentPosition(order[i]!)).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING,
-      );
-    }
+    expect(layout.region.contains(search)).toBe(false);
+    expect(layout.region.contains(layout.toolbarAnchor)).toBe(false);
+    const order = [...doc.querySelectorAll('*')];
+    expect(order.indexOf(search!)).toBeLessThan(order.indexOf(layout.region));
+    expect(layout.region.getAttribute('data-hpc')).toBe('true');
+    expect(layout.region.querySelectorAll('section').length).toBe(0);
+  });
+
+  // @req REQ-TR-11
+  it('anchors the toolbar after the native search and before the results region', () => {
+    const doc = load('vscode-all-first.html');
+    const layout = recognizeLayout(doc);
+    expect(layout.ok).toBe(true);
+    if (!layout.ok) return;
+    const order = [...doc.querySelectorAll('*')];
+    const search = doc.querySelector('search')!;
+    expect(layout.toolbarAnchor).toBe(search);
+    expect(order.indexOf(search)).toBeLessThan(order.indexOf(layout.region));
   });
 
   // @req REQ-TS-2
@@ -83,23 +113,27 @@ describe('recognizeLayout', () => {
 describe('readScope', () => {
   // @req REQ-TB-3
   it.each([
-    ['vscode-all-first.html', 'all', ''],
-    ['vscode-active.html', 'active', ''],
-    ['vscode-overview.html', 'overview', ''],
-    ['vscode-search.html', 'all', 'OSSA'],
-    ['vscode-search-empty.html', 'all', 'zzz-no-such-branch-xyz'],
-  ])('%s reads view and query', (file, view, query) => {
-    expect(readScope(load(file), { pathname: '/microsoft/vscode/branches' })).toMatchObject({
-      view,
-      query,
-    });
+    ['vscode-all-first.html', '/microsoft/vscode/branches/all', 'all', ''],
+    ['vscode-active.html', '/microsoft/vscode/branches/active', 'active', ''],
+    ['vscode-overview.html', '/microsoft/vscode/branches', 'overview', ''],
+    ['vscode-search.html', '/microsoft/vscode/branches/all', 'all', 'OSSA'],
+    ['vscode-search-empty.html', '/microsoft/vscode/branches/all', 'all', 'zzz-no-such-branch-xyz'],
+  ])('%s reads view and query', (file, pathname, view, query) => {
+    expect(readScope(load(file), { pathname })).toMatchObject({ view, query });
   });
 
   // @req REQ-TB-3
-  it('reads an overview page as the overview view', () => {
-    expect(readScope(load('vscode-overview.html'), { pathname: '/microsoft/vscode/' }).view).toBe(
-      'overview',
-    );
+  it('ignores a path segment that is not a view and uses the tab', () => {
+    const doc = load('vscode-active.html');
+    expect(readScope(doc, { pathname: '/microsoft/vscode/branches/other' }).view).toBe('active');
+    expect(readScope(doc, { pathname: '/microsoft/vscode/tree/active' }).view).toBe('active');
+  });
+
+  // @req REQ-TB-3
+  it('falls back to the observed page title', () => {
+    const doc = load('vscode-overview.html');
+    for (const tab of doc.querySelectorAll('a[aria-current="page"]')) tab.removeAttribute('aria-current');
+    expect(readScope(doc, { pathname: '/' }).view).toBe('overview');
   });
 
   // @req REQ-TB-3
@@ -114,8 +148,9 @@ describe('readScope', () => {
 
   // @req REQ-TB-3
   it('gives two different scopes different keys', () => {
-    const searchPage = load('vscode-search.html');
-    const query = readScope(searchPage, { pathname: '/microsoft/vscode/branches/all' });
+    const query = readScope(load('vscode-search.html'), {
+      pathname: '/microsoft/vscode/branches/all',
+    });
     const otherView = readScope(load('search-in-active'), {
       pathname: '/microsoft/vscode/branches/active',
     });
@@ -125,13 +160,16 @@ describe('readScope', () => {
     expect(query.key).not.toBe(otherView.key);
     expect(query.key).not.toBe(noQuery.key);
     expect(otherView.key).not.toBe(noQuery.key);
-    expect(readScope(load('search-in-active'), { pathname: '/microsoft/vscode/branches/active' }).key)
-      .toBe(otherView.key);
+    expect(
+      readScope(load('search-in-active'), { pathname: '/microsoft/vscode/branches/active' }).key,
+    ).toBe(otherView.key);
   });
 
   // @req REQ-TB-3
   it('keeps the key stable for the same scope', () => {
-    expect(readScope(load('vscode-active.html'), { pathname: '/microsoft/vscode/branches/active' }))
-      .toEqual(readScope(load('vscode-active.html'), { pathname: '/microsoft/vscode/branches/active' }));
+    const loc = { pathname: '/microsoft/vscode/branches/active' };
+    expect(readScope(load('vscode-active.html'), loc)).toEqual(
+      readScope(load('vscode-active.html'), loc),
+    );
   });
 });
