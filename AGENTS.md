@@ -17,6 +17,10 @@ pnpm check
 This runs `tsc --noEmit`, `wxt build`, `wxt build -b firefox` and `vitest run`.
 It must exit 0 before any task is merged.
 
+`.github/workflows/ci.yml` runs that same command on GitHub Actions for every push
+to `main` and every pull request, then zips both targets and the Firefox sources
+and keeps them as artifacts. It uses no credentials and publishes nothing.
+
 ## Hard constraints
 
 - No credentials of any kind: no personal access token, no GitHub App, no OAuth,
