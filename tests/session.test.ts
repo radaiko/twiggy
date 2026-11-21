@@ -54,6 +54,14 @@ describe('session view states', () => {
     );
   });
 
+  it('@req REQ-TS-4 off is never a verified state and exposes no count', () => {
+    const off = run({ type: 'collector', collector: collector({ status: 'complete', proof: 'end-signal' }) }, { type: 'switch', on: false });
+    // Off outranks every collected outcome, so the native list never reads as verified.
+    expect(viewOf(off)).toBe('off');
+    expect(off.rows).toEqual([]);
+    expect(viewOf(reduce(off, { type: 'collector', collector: collector({ status: 'complete', proof: 'end-signal' }) }))).toBe('off');
+  });
+
   it('@req REQ-TB-5 off survives scope and route events until a new session', () => {
     const off = run({ type: 'switch', on: false });
     expect(viewOf(reduce(off, { type: 'scope', scope: { view: 'stale', query: '', key: 'stale|' } }))).toBe('off');
@@ -70,7 +78,7 @@ describe('session view states', () => {
     expect(next.rows).toEqual([]);
   });
 
-  it('@req REQ-BC-9 off ignores a retry, a partial tree retries to collecting with its rows kept', () => {
+  it('@req REQ-BC-9 a partial tree retries to collecting with its collected rows kept', () => {
     const partial = run({ type: 'collector', collector: collector({ status: 'partial', rows: ROWS.slice(0, 1), reason: 'stalled' }) });
     expect(viewOf(partial)).toBe('tree-partial');
     const retrying = reduce(partial, { type: 'collector', collector: collector({ status: 'collecting', rows: ROWS }) });

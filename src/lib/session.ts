@@ -71,10 +71,8 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
         : { ...state, switchOn: false, handoff: false, rows: [], outcome: null };
     // REQ-TB-5, REQ-BA-9: with the switch off no collection runs and nothing is collected.
     case 'collector':
-      if (!state.switchOn) {
-        if (state.outcome?.status !== 'idle') return state;
-        return { ...state, outcome: event.collector.status === 'idle' ? event.collector : null };
-      }
+      // REQ-TB-5, REQ-BA-9: with the switch off no collection runs and nothing is collected.
+      if (!state.switchOn) return state;
       return { ...state, rows: event.collector.rows, outcome: event.collector };
     // Design decision 7: any handoff sets the switch off first, so the native list is operable.
     case 'handoff':
