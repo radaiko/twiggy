@@ -552,3 +552,29 @@ describe('keys on a row control belong to the control', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 });
+
+describe('a sectioned page keeps navigation in the focused section', () => {
+  // @req REQ-TA-5
+  it('expanding a folder in the second section leaves focus there', () => {
+    const expansion = createExpansion();
+    const el = renderTree(
+      [
+        { section: 'Default', rows: [{ name: 'main', section: 'Default' }] },
+        { section: 'Active branches', rows: [{ name: 'feat/x', section: 'Active branches' }] },
+      ],
+      expansion,
+      { scope: SCOPE, doc: document },
+    );
+    document.body.append(el);
+    const second = el.querySelectorAll<HTMLElement>('[role="tree"]')[1]!;
+    const folder = [...second.querySelectorAll<HTMLElement>('[role="treeitem"]')].find(
+      (item) => item.getAttribute('aria-expanded') !== null,
+    )!;
+    folder.focus();
+    folder.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    const again = el.querySelectorAll<HTMLElement>('[role="tree"]')[1]!;
+    const focused = document.activeElement as HTMLElement | null;
+    expect(focused === null || again.contains(focused)).toBe(true);
+    expect(again.querySelectorAll('[tabindex="0"][role="treeitem"]')).toHaveLength(1);
+  });
+});

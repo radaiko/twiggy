@@ -243,11 +243,6 @@ function row(
   return item;
 }
 
-// Every path of a tree, open or not, so a section can tell whether it holds the active row.
-function pathsOf(nodes: readonly TreeNode[]): string[] {
-  return nodes.flatMap((node) => [node.fullPath, ...pathsOf(node.children)]);
-}
-
 const rowsOf = (root: Element): HTMLElement[] => [...root.querySelectorAll<HTMLElement>(ROW_SELECTOR)];
 const rowWith = (root: Element, fullPath: string): HTMLElement | null =>
   rowsOf(root).find((candidate) => candidate.getAttribute(ROW_PATH) === fullPath) ?? null;
@@ -308,11 +303,9 @@ function tree(section: TreeSection, context: Context): HTMLElement {
   if (heading) list.setAttribute('aria-labelledby', heading.id);
 
   const nodes = buildTree(section.rows.map((collected) => collected.name));
-  // REQ-TA-2: several sections render as several trees, so the active row is per tree; a tree that
-  // does not hold it puts its own first row in the tab order.
-  const held = context.active.id;
-  const owns = held !== null && pathsOf(nodes).includes(held);
-  const scoped: Context = owns ? context : { ...context, active: { id: nodes[0]?.fullPath ?? null } };
+  // REQ-TA-2: several sections render as several trees. Each keeps one tab stop (see retab), but
+  // navigation always writes the shared active id, so a redraw never jumps to another section.
+  const scoped: Context = context;
   // REQ-TA-5: a collapse lands on this section's nearest visible ancestor, never another's.
   const local: Context = {
     ...scoped,
