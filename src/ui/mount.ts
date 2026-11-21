@@ -300,6 +300,10 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     const replaces = REPLACES_NATIVE.has(view);
     inside.toggleAttribute('hidden', replaces);
     inside.toggleAttribute('inert', replaces);
+    if (!replaces && hiddenNode !== null && hiddenNode !== inside) {
+      hiddenNode.removeAttribute('hidden');
+      hiddenNode.removeAttribute('inert');
+    }
     hiddenNode = replaces ? inside : null;
 
     // The tree is drawn only when what it would draw changes, and stands in the results' place.

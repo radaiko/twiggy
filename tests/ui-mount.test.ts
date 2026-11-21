@@ -416,13 +416,17 @@ describe('mount', () => {
     await advance('vscode-all-end.html');
     expect(hiddenNow()).toBe(true);
 
-    // GitHub re-renders into something Twiggy cannot read: the region must not stay hidden.
-    region().replaceWith(document.createElement('div'));
+    // GitHub re-renders into something Twiggy cannot read. The node it hid stays in the document,
+    // so it must be handed back rather than left hidden and inert.
+    const wasHidden = region();
+    wasHidden.removeAttribute('data-hpc');
     win.dispatchEvent(new Event('popstate'));
     await settled();
 
     expect(wired.view()).toBe('unsupported');
     expect(twiggy()).toEqual([]);
+    expect(wasHidden.hasAttribute('hidden')).toBe(false);
+    expect(wasHidden.hasAttribute('inert')).toBe(false);
   });
 
   // @req REQ-TS-3
