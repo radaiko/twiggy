@@ -172,18 +172,20 @@ A partial tree after pressing "Stop collecting": the non-dismissible strip, the 
 | `partial-stop-1280-dark.png` | Chromium 1248 | dark | 1280 | https://github.com/microsoft/vscode/branches/all |
 | `partial-stop-1280-light.png` | Chromium 1248 | light | 1280 | https://github.com/microsoft/vscode/branches/all |
 
-### whole-repo-final
+### whole-repo-partial
 
-A completed tree on the whole-repository scope: separate folder levels with descendant counts.
+The whole-repository scope, **before** a completion proof was reached: a partial tree with the
+non-dismissible strip and lower-bound folder counts. No complete tree was captured on this scope
+(see "What the whole-repository run showed").
 
 | File | Browser | Theme | Width | URL |
 | --- | --- | --- | --- | --- |
-| `whole-repo-final-640-dark.png` | Chromium 1248 | dark | 640 | https://github.com/microsoft/vscode/branches/all |
-| `whole-repo-final-640-light.png` | Chromium 1248 | light | 640 | https://github.com/microsoft/vscode/branches/all |
-| `whole-repo-final-900-dark.png` | Chromium 1248 | dark | 900 | https://github.com/microsoft/vscode/branches/all |
-| `whole-repo-final-900-light.png` | Chromium 1248 | light | 900 | https://github.com/microsoft/vscode/branches/all |
-| `whole-repo-final-1280-dark.png` | Chromium 1248 | dark | 1280 | https://github.com/microsoft/vscode/branches/all |
-| `whole-repo-final-1280-light.png` | Chromium 1248 | light | 1280 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-640-dark.png` | Chromium 1248 | dark | 640 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-640-light.png` | Chromium 1248 | light | 640 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-900-dark.png` | Chromium 1248 | dark | 900 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-900-light.png` | Chromium 1248 | light | 900 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-1280-dark.png` | Chromium 1248 | dark | 1280 | https://github.com/microsoft/vscode/branches/all |
+| `whole-repo-partial-1280-light.png` | Chromium 1248 | light | 1280 | https://github.com/microsoft/vscode/branches/all |
 ## What the whole-repository run showed
 
 Collection on `microsoft/vscode` is **partial, not complete**. The repository has 28 pages of 20
@@ -204,7 +206,16 @@ Taken in the browser at 1280 px, one row and one control:
 | Control targets | 44 × 44 px (9 of 9) | 44 × 44 px (9 of 9) | `twiggy.target` 44 × 44 |
 | Panel text contrast | 15.8:1 | 17.39:1 | ≥ 4.5:1 |
 | Focus ring | 2 px outline, 2 px offset | 2 px outline, 2 px offset | `twiggy.focus` |
+| Focus contrast (outline vs adjacent) | 15.8:1 | 17.39:1 | ≥ 3:1 |
 | Indent per level | `--twiggy-level: 1` → 20 px | same | `twiggy.indent` 20 px |
+
+## States not captured
+
+- **The collapsed 500+ branch scope with exact folder counts**: no capture shows the whole
+  repository fully collected while collapsed, because the whole-repo run never reached a
+  completion proof. The collapsed *chain* captures show the collapsed presentation.
+- **A 12-level chain**: the deepest chain captured is the `expansion-chain` pair. Neither its
+  depth nor a 12-level overflow was measured in the browser, so no such claim is made.
 
 ## Browsers and hosts
 
