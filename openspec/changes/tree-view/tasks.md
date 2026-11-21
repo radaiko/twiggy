@@ -41,7 +41,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/native-reader-layout.test.ts` (jsdom, fixtures) asserts: each fixture is recognised; `/all`, `/active`, the overview and a committed query give the right `view` and `query`; a document with its results markup removed returns `{ ok: false }`; two different scopes give different keys.
     - `pnpm check` exits 0.
 
-- [ ] 2.2 Read branch rows and native badges
+- [x] 2.2 Read branch rows and native badges
   - tier: normal
   - files: `src/lib/native-reader.ts`, `tests/native-reader-rows.test.ts`
   - deps: none
