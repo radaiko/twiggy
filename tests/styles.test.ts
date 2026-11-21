@@ -212,7 +212,9 @@ describe("component class coverage", () => {
         emitted.add(match[0]);
       }
     }
-    const missing = [...emitted].filter((name) => !css.includes(`.${name}`));
+    // Word-boundary match, so `.twiggy-empty-state` does not satisfy an emitted `twiggy-empty`.
+    const defined = (name: string) => new RegExp(`\\.${name}(?![\\w-])`).test(css);
+    const missing = [...emitted].filter((name) => !defined(name));
     expect(missing).toEqual([]);
   });
 });
