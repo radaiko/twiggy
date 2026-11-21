@@ -4,10 +4,12 @@ import type { TreeNode } from '../lib/branch-tree';
 import { buildTree } from '../lib/branch-tree';
 import type { CollectedRow } from '../lib/collector';
 import { COPY } from '../lib/copy';
+import type { Entry, EntryAvailability } from '../lib/native-actions';
 import { focusAfterCollapse, next, typeAhead } from '../lib/tree-nav';
 import type { NavKey } from '../lib/tree-nav';
 import { countDescription, countText, flatten, openSet, toggle } from '../lib/tree-view-model';
 import type { Expansion, TreeItem } from '../lib/tree-view-model';
+import { openMenu } from './actions-menu';
 
 // The native page may present several result sections; each becomes its own tree.
 export type TreeSection = {
@@ -22,7 +24,13 @@ export type TreeOptions = {
   incomplete?: boolean;
   badges?: Readonly<Record<string, BranchBadges>>;
   onOpen?: (fullPath: string) => void;
-  onActions?: (fullPath: string) => void;
+  /**
+   * Reports a chosen menu entry for `fullPath` (REQ-BA-1). When set, a branch row's actions
+   * button opens the menu here; without it `onActions` only reports that the menu was asked for.
+   */
+  onActions?: (fullPath: string, entry?: Entry) => void;
+  /** REQ-BA-3: read fresh on every open, so an entry reflects the native row as it is now. */
+  availability?: (fullPath: string) => readonly EntryAvailability[];
   /** The page's document; a Turbo page can own a fresh one. */
   doc?: Document;
 };
@@ -89,7 +97,8 @@ type Context = {
   /** REQ-TA-4: the typed prefix and when it expires; both outlive a redraw. */
   typed: { buffer: string; resetAt: number };
   onOpen?: (fullPath: string) => void;
-  onActions?: (fullPath: string) => void;
+  onActions?: (fullPath: string, entry?: Entry) => void;
+  availability?: (fullPath: string) => readonly EntryAvailability[];
   /** Re-renders the widget after an expansion change. */
   redraw: () => void;
   /** REQ-TA-5: moves the active row to the nearest visible ancestor of a collapsed folder. */
@@ -117,11 +126,23 @@ function branchLink(
   return link;
 }
 
+// The menu's availability comes from `source` when the button opens it, never from the render.
+function openActions(
+  button: HTMLElement,
+  fullPath: string,
+  source: (fullPath: string) => readonly EntryAvailability[],
+  onActions?: (fullPath: string, entry?: Entry) => void,
+): void {
+  const doc = button.ownerDocument;
+  openMenu(button, fullPath, source(fullPath), (entry) => onActions?.(fullPath, entry), { doc });
+}
+
 function actionsCell(
   doc: Document,
   fullPath: string,
   tabStop: boolean,
-  onActions?: (fullPath: string) => void,
+  onActions?: (fullPath: string, entry?: Entry) => void,
+  availability?: (fullPath: string) => readonly EntryAvailability[],
 ): HTMLElement {
   const cell = element('div', 'twiggy-actions-cell', undefined, doc);
   const button = element('button', 'twiggy-actions-button', undefined, doc);
@@ -130,7 +151,12 @@ function actionsCell(
   button.setAttribute('aria-haspopup', 'menu');
   button.tabIndex = tabStop ? 0 : -1;
   button.append(icon('kebab', doc));
-  button.addEventListener('click', () => onActions?.(fullPath));
+  button.addEventListener('click', () => {
+    // REQ-BA-1: with a source from the caller the button opens the menu itself; without one the
+    // click is only reported, as a row with no menu wired yet.
+    if (availability) openActions(button, fullPath, availability, onActions);
+    else onActions?.(fullPath);
+  });
   cell.append(button);
   return cell;
 }
@@ -226,7 +252,7 @@ function row(
   // REQ-TR-3, REQ-TR-4: every branch row carries its own always-visible actions button; a folder
   // that is also a branch targets only that exact branch, never its descendants.
   if (!folders || vnode.isLeaf) {
-    rowEl.append(actionsCell(doc, vnode.fullPath, isActive, context.onActions));
+    rowEl.append(actionsCell(doc, vnode.fullPath, isActive, context.onActions, context.availability));
   }
 
   if (folders) {
@@ -333,6 +359,20 @@ const NAV_KEYS: readonly string[] = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Arr
 function onKey(event: KeyboardEvent, list: HTMLElement, section: TreeSection, context: Context): void {
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const target = event.target as HTMLElement | null;
+
+  // REQ-BA-1: Shift+F10 opens the active branch row's menu. A folder row has none (REQ-BA-2).
+  if (event.key === 'F10' && event.shiftKey) {
+    event.preventDefault();
+    const pressedRow = target?.closest(ROW_SELECTOR) ?? null;
+    const path = pressedRow?.getAttribute(ROW_PATH) ?? null;
+    const button = pressedRow?.querySelector<HTMLElement>(':scope > .twiggy-row .twiggy-actions-button');
+    if (path === null || button === null || button === undefined) return;
+    context.active.id = path;
+    if (context.availability) openActions(button, path, context.availability, context.onActions);
+    else context.onActions?.(path);
+    return;
+  }
+
   const onRow = target !== null && target.getAttribute('role') === 'treeitem';
 
   // A key pressed on a row acts on that row: the event's row is the active one from here on.
@@ -424,6 +464,7 @@ export function renderTree(
       typed,
       onOpen: options.onOpen,
       onActions: options.onActions,
+      availability: options.availability,
       redraw: draw,
       landAfterCollapse: (collapsedId: string) => {
         context.active.id = collapsedId;
