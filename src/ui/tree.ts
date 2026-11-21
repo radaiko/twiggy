@@ -313,13 +313,18 @@ function tree(section: TreeSection, context: Context): HTMLElement {
   const held = context.active.id;
   const owns = held !== null && pathsOf(nodes).includes(held);
   const scoped: Context = owns ? context : { ...context, active: { id: nodes[0]?.fullPath ?? null } };
-  nodes.forEach((node, index) => list.append(row(node, 1, index + 1, nodes.length, scoped)));
-
-  context.landAfterCollapse = (collapsedId: string) => {
-    const landing = focusAfterCollapse(itemsOf(section, context), context.active.id, collapsedId);
-    context.active.id = landing ?? collapsedId;
+  // REQ-TA-5: a collapse lands on this section's nearest visible ancestor, never another's.
+  const local: Context = {
+    ...scoped,
+    landAfterCollapse: (collapsedId: string) => {
+      const landing = focusAfterCollapse(itemsOf(section, context), context.active.id, collapsedId);
+      context.active.id = landing ?? collapsedId;
+    },
   };
-  list.addEventListener('keydown', (event) => onKey(event, list, section, context));
+  nodes.forEach((node, index) => list.append(row(node, 1, index + 1, nodes.length, local)));
+
+  // Each tree owns its own collapse landing, so a sectioned page never consults another section.
+  list.addEventListener('keydown', (event) => onKey(event, list, section, local));
   wrapper.append(list);
   return wrapper;
 }
@@ -340,6 +345,10 @@ function onKey(event: KeyboardEvent, list: HTMLElement, section: TreeSection, co
   // A key pressed on a row acts on that row: the event's row is the active one from here on.
   const pressed = target?.closest(ROW_SELECTOR)?.getAttribute(ROW_PATH) ?? null;
   if (pressed !== null) context.active.id = pressed;
+
+  // REQ-TA-2: the row's own link and actions button are reachable tab stops, so Enter and Space
+  // pressed on them belong to the control, not to row navigation.
+  if (!onRow && (event.key === 'Enter' || event.key === ' ')) return;
 
   if (NAV_KEYS.includes(event.key)) {
     event.preventDefault();

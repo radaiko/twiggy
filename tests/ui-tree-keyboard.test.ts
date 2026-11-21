@@ -528,3 +528,27 @@ describe('focus recovery', () => {
   });
 
 });
+
+describe('keys on a row control belong to the control', () => {
+  // @req REQ-TA-2
+  it('Enter on the actions button opens it instead of following the branch', () => {
+    const names = ['main'];
+    const { el, onOpen, onActions } = render(names);
+    const action = el.querySelector<HTMLButtonElement>('button[aria-label^="Actions"]')!;
+    action.focus();
+    action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(onOpen).not.toHaveBeenCalled();
+    // Not consumed by the tree: the browser's own Enter-to-click still reaches the button.
+    expect(onActions).not.toHaveBeenCalled();
+  });
+
+  // @req REQ-TA-2
+  it('Space on the actions button is not consumed by the tree', () => {
+    const { el } = render(['main']);
+    const action = el.querySelector<HTMLButtonElement>('button[aria-label^="Actions"]')!;
+    action.focus();
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    action.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
