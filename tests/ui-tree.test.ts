@@ -223,6 +223,14 @@ describe('branch rows', () => {
   });
 
   // @req REQ-TR-3
+  it('gives a plain branch row its own trailing actions control', () => {
+    const branch = rows(tree(render(sections(['feature/login/oauth']), expanded(['feature/login/oauth']))))[2]!;
+    const action = actionOf(branch);
+    expect(action).not.toBeNull();
+    expect(action!.getAttribute('aria-label')).toBe(COPY.actionsFor('feature/login/oauth'));
+  });
+
+  // @req REQ-TR-3
   it('puts the trailing actions control in its own cell, present without hover or focus', () => {
     const expansion = createExpansion();
     expansion.set(SCOPE, new Set(['main', 'main/x']));
