@@ -106,7 +106,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/tree-view-model.test.ts` asserts: `feature/login/oauth` gives three levels collapsed to one visible item and three when expanded; expansion survives `toggle` across scope keys independently; `≥` and "At least 12 collected branches" only when `incomplete`; a node that is branch and folder yields one item; 1000 branches flatten to the right visible count after `expandAll`; `a` precedes `main` where `main` is the default; posInSet and setSize describe the full visible tree.
     - `pnpm check` exits 0.
 
-- [ ] 4.3 Session reducer
+- [x] 4.3 Session reducer
   - tier: hard
   - files: `src/lib/session.ts`, `tests/session.test.ts`
   - deps: none
