@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
@@ -195,5 +196,23 @@ describe('stylesheet', () => {
     ]) {
       expect(css, name).toContain(`.${name}`);
     }
+  });
+});
+
+// The stylesheet and the components must name the same classes; drift here leaves the strips and
+// the empty state unstyled.
+describe("component class coverage", () => {
+  const components = ["src/ui/toolbar.ts", "src/ui/status.ts"];
+  const root = new URL('../', import.meta.url).pathname;
+
+  it("defines every twiggy- class the components emit", () => {
+    const emitted = new Set<string>();
+    for (const file of components) {
+      for (const match of readFileSync(join(root, file), "utf8").matchAll(/twiggy-[a-z-]+/g)) {
+        emitted.add(match[0]);
+      }
+    }
+    const missing = [...emitted].filter((name) => !css.includes(`.${name}`));
+    expect(missing).toEqual([]);
   });
 });

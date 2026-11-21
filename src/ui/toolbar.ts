@@ -98,10 +98,12 @@ export function renderToolbar(input: ToolbarState, handlers: ToolbarHandlers): H
   if (FOLDERED.has(state) && hasFolder(rows)) {
     const expand = doc.createElement('button');
     expand.type = 'button';
+    expand.className = 'twiggy-toolbar-button';
     expand.textContent = COPY.expandAll;
     expand.addEventListener('click', () => handlers.onExpandAll());
     const collapse = doc.createElement('button');
     collapse.type = 'button';
+    collapse.className = 'twiggy-toolbar-button';
     collapse.textContent = COPY.collapseAll;
     collapse.addEventListener('click', () => handlers.onCollapseAll());
     toolbar.append(expand, collapse);

@@ -27,14 +27,9 @@ function count(n: number): HTMLElement {
 // REQ-TB-6: pinned above the native list while collection runs, no blocker, no percentage.
 export function renderCollecting(n: number, { onStop }: { onStop?: () => void } = {}): HTMLElement {
   const strip = element('div', 'twiggy-status twiggy-collecting');
-  strip.style.position = 'sticky';
-  strip.style.top = '0';
-  strip.style.zIndex = '1';
   strip.setAttribute('role', 'status');
   const title = element('p', 'twiggy-status-title', COPY.collectingTitle);
-  title.style.fontWeight = '600';
   const detail = element('p', 'twiggy-status-detail', COPY.collectingDetail);
-  detail.style.fontSize = '12px';
   const actions = element('div', 'twiggy-status-actions');
   actions.append(button(COPY.stopCollecting, onStop));
   strip.append(title, detail, count(n), actions);
@@ -50,9 +45,7 @@ export function renderPartial(
   const strip = element('div', 'twiggy-status twiggy-partial');
   strip.dataset.reason = reason;
   const title = element('p', 'twiggy-status-title', COPY.partialTitle(n));
-  title.style.fontWeight = '600';
   const detail = element('p', 'twiggy-status-detail', COPY.partialReasons[reason]);
-  detail.style.fontSize = '12px';
   const actions = element('div', 'twiggy-status-actions');
   actions.append(button(COPY.tryCollectingAgain, onRetry), button(COPY.showGitHubList, onShowList));
   strip.append(title, detail, actions);
@@ -62,15 +55,11 @@ export function renderPartial(
 // REQ-TS-1: confirmed zero only. No button, no illustration, no new-branch affordance.
 export function renderEmpty({ hasQuery }: { hasQuery: boolean }): HTMLElement {
   const empty = element('div', 'twiggy-empty');
-  empty.style.padding = '24px';
   const heading = element(
     'p',
     'twiggy-empty-heading',
     hasQuery ? COPY.emptySearchHeading : COPY.emptyViewHeading,
   );
-  heading.style.fontSize = '16px';
-  heading.style.lineHeight = '24px';
-  heading.style.fontWeight = '600';
   empty.append(
     heading,
     element(
@@ -85,7 +74,6 @@ export function renderEmpty({ hasQuery }: { hasQuery: boolean }): HTMLElement {
 // REQ-TS-2: the native results stay as they are; this only explains why Twiggy is not drawing.
 export function renderUnsupported(): HTMLElement {
   const status = element('div', 'twiggy-status twiggy-unsupported');
-  status.style.fontSize = '12px';
   status.textContent = COPY.unsupportedStatus;
   return status;
 }
@@ -96,7 +84,6 @@ export function renderHandoffStale(
   { onShowList }: { onShowList?: () => void } = {},
 ): HTMLElement {
   const status = element('div', 'twiggy-status twiggy-handoff-stale');
-  status.style.fontSize = '12px';
   status.append(
     element('p', 'twiggy-status-detail', rowGone ? COPY.rowGoneStatus(name) : COPY.controlLostStatus),
     button(COPY.showBranchInGitHubList, onShowList),

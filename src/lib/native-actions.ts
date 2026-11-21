@@ -26,9 +26,22 @@ export type Result =
   | { ok: true; entry: Entry; outcome: 'followed' | 'invoked' | 'confirmation' | 'revealed' }
   | { ok: false; reason: 'control-lost' | 'row-gone' };
 
-// Only a control whose accessible name says rename is a rename affordance.
+// A row's own action controls, never a branch link elsewhere in the row: a branch called
+// `feature/rename-x` or `x/compare` must not be mistaken for a control.
+function isBranchLink(element: Element): boolean {
+  return Boolean(element.closest('a[data-component="BranchName"]'));
+}
+
+// Controls anywhere in the row except the branch's own link. Excluding the branch link is what
+// keeps a branch named `feature/rename-x` or `x/compare` from being mistaken for a control.
+function controlsOf(row: Element, selector: string): Element[] {
+  return [...row.querySelectorAll(selector)].filter((candidate) => !isBranchLink(candidate));
+}
+
+// Only a control whose accessible name says rename is a rename affordance, and only inside the
+// row's action controls.
 function renameOf(row: Element): Element | null {
-  for (const control of row.querySelectorAll('button, a, summary')) {
+  for (const control of controlsOf(row, 'button, a[role="menuitem"], summary')) {
     const label = `${control.getAttribute('aria-label') ?? ''} ${control.textContent ?? ''}`;
     if (/rename/i.test(label)) return control;
   }
@@ -51,8 +64,13 @@ function deleteOf(row: Element): { control: Element; confirmation: boolean } | n
   return { control, confirmation: control.matches(CONFIRMATION_CONTROL) };
 }
 
+// Compare must be the row's own compare affordance, not a branch whose path contains /compare.
+function compareOf(row: Element): Element | null {
+  return controlsOf(row, COMPARE_LINK)[0] ?? null;
+}
+
 function entryAvailable(row: Element, entry: Entry): EntryState {
-  if (entry === 'compare') return row.querySelector(COMPARE_LINK) ? 'enabled' : 'unavailable';
+  if (entry === 'compare') return compareOf(row) ? 'enabled' : 'unavailable';
   if (entry === 'rename') return renameOf(row) ? 'enabled' : 'unavailable';
   return deleteOf(row) ? 'enabled' : 'unavailable';
 }
@@ -81,7 +99,7 @@ export function perform(doc: Document, fullName: string, entry: Entry, deps: Dep
   if (!row) return { ok: false, reason: 'row-gone' };
 
   if (entry === 'compare') {
-    const href = row.querySelector(COMPARE_LINK)?.getAttribute('href');
+    const href = compareOf(row)?.getAttribute('href');
     // REQ-BA-4: no destination means no URL; Twiggy never builds one from route syntax.
     if (!href) return reveal(deps, row, entry, { ok: false, reason: 'control-lost' });
     deps.navigate(href);

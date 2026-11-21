@@ -166,6 +166,23 @@ describe("availability", () => {
   });
 
   // @req REQ-BA-3
+  it("never mistakes a branch named like a control for that control", () => {
+    const doc = load("vscode-all-first.html");
+    const anchor = doc.querySelector('a[data-component="BranchName"]');
+    anchor
+      ?.closest("tr")
+      ?.insertAdjacentHTML(
+      "afterend",
+      '<tr role="row" data-component="Table.Row"><td role="cell"><a data-component="BranchName" href="/microsoft/vscode/tree/feature/compare"><div title="feature/compare">feature/compare</div></a></td></tr>' +
+        '<tr role="row" data-component="Table.Row"><td role="cell"><a data-component="BranchName" href="/microsoft/vscode/tree/feature/rename-x"><div title="feature/rename-x">feature/rename-x</div></a></td></tr>',
+    );
+    const forCompare = availability(doc, "feature/compare");
+    const forRename = availability(doc, "feature/rename-x");
+    expect(forCompare.find((e) => e.entry === "compare")?.state).toBe("unavailable");
+    expect(forRename.find((e) => e.entry === "rename")?.state).toBe("unavailable");
+  });
+
+  // @req REQ-BA-3
   it("resolves against the current document, not a remembered element", () => {
     const doc = load("vscode-all-first.html");
     expect(enabled(availability(doc, NAME).find((e) => e.entry === "delete")!)).toBe(true);

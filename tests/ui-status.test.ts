@@ -25,8 +25,9 @@ describe('collecting strip', () => {
     expect(text(strip)).toContain(COPY.collectingDetail);
     expect(text(strip)).toContain(COPY.branchesCollected(20));
     expect(buttons(strip)).toContain(COPY.stopCollecting);
-    expect(strip.style.position).toBe('sticky');
-    expect(strip.style.top).toBe('0px');
+    // Pinning lives in the stylesheet, not in inline styles (tests/styles.test.ts asserts it).
+    expect(strip.className).toContain('twiggy-status');
+    expect(strip.className).toContain('twiggy-collecting');
     expect(text(strip)).not.toContain('%');
   });
 
