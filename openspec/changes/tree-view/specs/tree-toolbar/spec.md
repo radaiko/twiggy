@@ -70,7 +70,7 @@ When the switch is off the collection status, tree and expand/collapse buttons S
 - **THEN** no storage API is called
 
 ### Requirement: REQ-TB-6 Collection strip while collecting
-Before movement and throughout collection a status strip SHALL be pinned at the top of the viewport, with no full-screen blocker, showing "Collecting branches…", "Twiggy scrolls GitHub's list to load this view. You can stop at any time.", "{n} branches collected" and the button "Stop collecting". It SHALL NOT show a percentage, estimate or total. The native list SHALL stay visible and no re-sorting tree SHALL be shown beside it.
+Before advancing and throughout collection a status strip SHALL be pinned at the top of the viewport, with no full-screen blocker, showing "Collecting branches…", "Twiggy pages through GitHub's list to load this view. You can stop at any time.", "{n} branches collected" and the button "Stop collecting". It SHALL NOT show a percentage, estimate or total. The native list SHALL stay visible and no re-sorting tree SHALL be shown beside it.
 
 #### Scenario: Strip content
 - **WHEN** collection starts

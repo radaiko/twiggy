@@ -73,14 +73,14 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/collector.test.ts` with fake ports asserts: initial rows read before the first `step`; rows deduplicated per section; complete only with each of the three proofs and the proof is named; no new rows for the stall limit gives `partial: stalled` and never `complete`; `isManualScroll` true before a step ends `partial: manual-scroll` with no further `step`; `stop('button')` gives `partial: stop-button`; `cancel()` discards rows and ends `idle`; `resume()` keeps rows and continues; a pending step result arriving after `cancel()` is ignored; a native error indicator seen through the ports ends `partial: stalled`.
     - `pnpm check` exits 0.
 
-- [ ] 3.2 DOM ports: scroll step, manual-scroll detection, anchor
+- [ ] 3.2 DOM ports: pagination advance, manual-scroll detection, anchor
   - tier: hard
   - files: `src/lib/scroll-port.ts`, `tests/scroll-port.test.ts`
   - deps: none
   - reqs: REQ-BC-7, REQ-BC-8, REQ-BC-10
   - done:
-    - `scroll-port.ts` exports `createScrollPorts(doc, win, region)` returning `step`, `isManualScroll`, `captureAnchor`, `restoreAnchor` and `dispose`, scrolling the element A3 identified. `isManualScroll` becomes true on `wheel`, `touchstart`, `touchmove`, `PageUp`/`PageDown`/`Home`/`End`/`Space` keys and on any scroll event whose position differs from the last position Twiggy set. No call moves focus.
-    - `tests/scroll-port.test.ts` (jsdom) asserts: a dispatched `wheel` sets the flag; a scroll event to a position Twiggy did not set sets it; a scroll Twiggy made does not; `restoreAnchor` restores a captured position; `restoreAnchor` does nothing after a manual scroll; `document.activeElement` is unchanged after `step`; `dispose` removes every listener.
+    - `scroll-port.ts` exports `createScrollPorts(doc, win, region)` returning `step`, `isManualScroll`, `captureAnchor`, `restoreAnchor` and `dispose`. `step` activates GitHub's own Next control (`a[data-component="Pagination.NextPage"][rel="next"]`, research A3/A4) inside the tab, waits for the list to be replaced, and resolves with whether a new page arrived; it never constructs a `?page=` URL, never calls `fetch`, and never navigates away. When no Next control is present or it is disabled, `step` reports that the end was reached. `isManualScroll` becomes true on `wheel`, `touchstart`, `touchmove`, `PageUp`/`PageDown`/`Home`/`End`/`Space` keys and on any scroll event whose position differs from the last position Twiggy set. No call moves focus.
+    - `tests/scroll-port.test.ts` (jsdom, fixtures) asserts: a dispatched `wheel` sets the flag; a scroll event to a position Twiggy did not set sets it; a scroll Twiggy made does not; `restoreAnchor` restores a captured position; `restoreAnchor` does nothing after a manual scroll; `step` on `vscode-all-first.html` activates the Next control and reports a new page; `step` with the pager absent reports the end (research A4); `step` never calls `fetch` and never assigns a page URL; `document.activeElement` is unchanged after `step`; `dispose` removes every listener.
     - `pnpm check` exits 0.
 
 ## 4. Model

@@ -10,7 +10,7 @@ The interface contract is `docs/design/tree-view.md` (mode Operate: extend GitHu
 
 ## What Changes
 
-- Twiggy scrolls GitHub's own branch list in the current tab to trigger its lazy loading, captures the rendered rows, and renders them as an Azure-DevOps-style tree with **separate levels** (`feature/` → `login/` → `oauth` are three rows).
+- Twiggy walks GitHub's own branches pagination in the current tab by activating GitHub's own Next control, captures the rows of each page, and renders them as an Azure-DevOps-style tree with **separate levels** (`feature/` → `login/` → `oauth` are three rows).
 - Collection is visible, interruptible and has an explicit outcome: complete, or partial with a stated reason and a retry. Completeness is claimed only on a native end-of-results signal, a reliable native scoped total, or an explicit native empty state.
 - A toolbar with a "Tree view" switch (off falls back to GitHub's native list), scope/count text, Expand all and Collapse all.
 - A trailing actions menu per branch (Compare, Rename, Delete) that hands off to GitHub's own native controls for that exact branch. Twiggy never renders its own rename form, compare builder or delete confirmation.
@@ -26,7 +26,7 @@ Out of scope, each its own change: the GHE host-grant screen, store packaging, b
 ### New Capabilities
 
 - `tree-rendering`: the tree, folder and branch rows, counts, layout and theming, replacing the native results.
-- `branch-collection`: scroll-and-collect, completion proof, interruption, partial state and retry.
+- `branch-collection`: advancing GitHub's own pagination, completion proof, interruption, partial state and retry.
 - `tree-toolbar`: the "Tree view" switch, scope/count text, expand/collapse, the off state, collection strip and announcements.
 - `branch-actions`: the per-branch menu and handoff to GitHub's native compare, rename and delete.
 - `tree-states`: empty results, unsupported layout and routes that render nothing.
@@ -39,7 +39,7 @@ Out of scope, each its own change: the GHE host-grant screen, store packaging, b
 ## Assumptions
 
 1. **Foundation is merged first (hard dependency).** At writing, `src/` and the toolchain do not exist yet; `src/` exists only after `extension-foundation` task 1.1. Every task here requires foundation tasks 1.1–5.1 to be merged (`pnpm check`, `buildTree`, `isBranchesPath`, `activate`, jsdom). Task 1.1 stops if not. This change MUST be archived after `extension-foundation`, because its `page-activation` delta is a MODIFIED requirement against a spec the foundation creates.
-2. **GitHub's markup is unknown to this spec.** The design agent could not inspect live GitHub and neither could this session. Every native fact below is an assumption verified by task 1.1: identifiable branch rows with a readable full name; a native scope (selected view + committed query); lazy loading that scrolling in the tab can trigger (infinite scroll or a "load more" that scroll/viewport can trigger); an observable end signal or scoped total; a native empty state; native rename/delete/compare affordances per row; separate result sections on the overview. If scrolling does **not** trigger loading (for example plain pagination links), task 1.1 stops and the change returns to a spec session; the collector is not allowed to click pagination controls or fetch pages on its own.
+2. **GitHub's markup is unknown to this spec.** The design agent could not inspect live GitHub and neither could this session. Every native fact below is an assumption verified by task 1.1: identifiable branch rows with a readable full name; a native scope (selected view + committed query); lazy loading that scrolling in the tab can trigger (infinite scroll or a "load more" that scroll/viewport can trigger); an observable end signal or scoped total; a native empty state; native rename/delete/compare affordances per row; separate result sections on the overview. Task 1.1 found exactly that: the branches list does not lazy-load on scroll but paginates in place with GitHub's own Next control (see `docs/research/github-branches-markup.md` A3). REQ-BC-2 was therefore amended to walk that control instead of scrolling. The collector may activate GitHub's own Next control inside the tab; it may not construct a page URL, fetch, or navigate away.
 3. **Native Delete may act without confirmation.** If GitHub's delete control removes a branch immediately (with only an undo), Twiggy's Delete entry must reveal the native row instead of clicking it. Task 1.1 records which case holds; REQ-BA-6 covers both.
 4. **Reference fixture is `microsoft/vscode`.** Verification and acceptance evidence use its public branches page and its `all` and `active` views, in a real browser, logged out. Committed unit-test fixtures are sanitized saved markup of those pages; unit tests never touch the network.
 5. **No framework.** The UI is plain TypeScript DOM code in light DOM with `twiggy-` prefixed classes and host Primer CSS variables, so it inherits GitHub's theme. No dependency is added by this change.
