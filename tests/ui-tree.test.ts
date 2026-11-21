@@ -45,6 +45,8 @@ function rows(root: Element): HTMLElement[] {
   return found;
 }
 const nameOf = (row: HTMLElement) => row.querySelector('.twiggy-name')?.textContent ?? '';
+// The treeitem is the outer element; `.twiggy-row` is the flex line that carries the row class.
+const lineOf = (row: HTMLElement) => row.querySelector<HTMLElement>(':scope > .twiggy-row')!;
 const actionOf = (row: HTMLElement) => row.querySelector<HTMLButtonElement>('button[aria-label^="Actions"]');
 const disclosureOf = (row: HTMLElement) => row.querySelector<HTMLElement>('.twiggy-disclosure')!;
 
@@ -152,7 +154,7 @@ describe('folder rows', () => {
   // @req REQ-TR-2
   it('shows the segment, a literal slash and the count, with no link and no actions button', () => {
     const folder = rows(tree(render(sections(names), createExpansion())))[0]!;
-    expect(folder.classList.contains('twiggy-folder-row')).toBe(true);
+    expect(lineOf(folder).classList.contains('twiggy-folder-row')).toBe(true);
     expect(nameOf(folder)).toBe('login/ 12');
     expect(folder.querySelector('.twiggy-count')!.textContent).toBe('12');
     expect(disclosureOf(folder).tagName).toBe('BUTTON');
@@ -209,9 +211,9 @@ describe('branch rows', () => {
   it('shows indentation, reserved disclosure space, an icon and the last segment as a link', () => {
     const names = ['feature/login/oauth'];
     const branch = rows(tree(render(sections(names), expanded(names))))[2]!;
-    expect(branch.classList.contains('twiggy-branch-row')).toBe(true);
-    expect(branch.style.getPropertyValue('--twiggy-level')).toBe('3');
-    const reserved = branch.querySelector(':scope > .twiggy-disclosure')!;
+    expect(lineOf(branch).classList.contains('twiggy-branch-row')).toBe(true);
+    expect(lineOf(branch).style.getPropertyValue('--twiggy-level')).toBe('3');
+    const reserved = branch.querySelector(':scope > .twiggy-row > .twiggy-disclosure')!;
     expect(reserved).not.toBeNull();
     expect(reserved.tagName).not.toBe('BUTTON');
     expect(branch.querySelector('.twiggy-icon')).not.toBeNull();
@@ -351,7 +353,7 @@ describe('large lists', () => {
     expect(folders).toHaveLength(40);
     expect(found).toHaveLength(43);
     for (const folder of folders) {
-      const prefix = COPY.atLeastCollected(0) === '' ? '' : (folder.querySelector('.twiggy-name span')!.textContent ?? '').replace(/\/$/, '');
+      const prefix = (folder.querySelector('.twiggy-name span')!.textContent ?? '').replace(/\/$/, '');
       const expected = names.filter((name) => name.startsWith(`${prefix}/`)).length;
       expect(folder.querySelector('.twiggy-count')!.textContent).toBe(String(expected));
     }

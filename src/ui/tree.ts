@@ -55,7 +55,8 @@ function icon(kind: keyof typeof ICONS): SVGSVGElement {
   svg.setAttribute('height', '16');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  svg.setAttribute('class', `twiggy-icon twiggy-icon-${kind}`);
+  // CSS class names are kebab-case; the icon keys are camelCase.
+  svg.setAttribute('class', `twiggy-icon twiggy-icon-${kind.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`);
   svg.innerHTML = ICONS[kind];
   return svg;
 }
@@ -110,12 +111,16 @@ function row(
   context: Context,
 ): HTMLElement {
   const folders = isFolder(vnode);
-  const rowEl = element('div', folders ? 'twiggy-folder-row' : 'twiggy-branch-row');
-  rowEl.setAttribute('role', 'treeitem');
+  // The treeitem is the outer element so its child group can sit under the row; the flex line
+  // itself is `.twiggy-row` with the indent custom property.
+  const item = element('div');
+  item.setAttribute('role', 'treeitem');
+  item.setAttribute('aria-level', String(level));
+  item.setAttribute('aria-posinset', String(posInSet));
+  item.setAttribute('aria-setsize', String(setSize));
+  const rowEl = element('div', `twiggy-row ${folders ? 'twiggy-folder-row' : 'twiggy-branch-row'}`);
   rowEl.style.setProperty('--twiggy-level', String(level));
-  rowEl.setAttribute('aria-level', String(level));
-  rowEl.setAttribute('aria-posinset', String(posInSet));
-  rowEl.setAttribute('aria-setsize', String(setSize));
+  item.append(rowEl);
 
   // Reads the expansion memory fresh, so a redraw after a toggle sees the new state.
   const isOpen = (fullPath: string) => openSet(context.expansion, context.scope).has(fullPath);
@@ -129,7 +134,7 @@ function row(
 
   if (folders) {
     const open = isOpen(vnode.fullPath);
-    rowEl.setAttribute('aria-expanded', String(open));
+    item.setAttribute('aria-expanded', String(open));
     const disclosure = element('button', 'twiggy-disclosure');
     disclosure.type = 'button';
     disclosure.setAttribute('aria-label', `${vnode.fullPath}/`);
@@ -162,21 +167,24 @@ function row(
   }
 
   const badges: BranchBadges | undefined = folders ? undefined : context.badges[vnode.fullPath];
-  const badgeText = [badges?.isDefault ? 'Default' : null, badges?.isProtected ? 'Protected' : null].filter(
-    (text): text is string => text !== null,
-  );
+  const badgeText: string[] = [
+    ...(badges?.isDefault ? [COPY.defaultBadge] : []),
+    ...(badges?.isProtected ? [COPY.protectedBadge] : []),
+  ];
   for (const text of badgeText) rowEl.append(element('span', 'twiggy-badge', text));
 
   const folder = folders ? folderName(vnode, context.incomplete) : '';
   const ownBranch = folders && vnode.isLeaf ? COPY.openBranch(vnode.fullPath) : '';
-  rowEl.setAttribute(
+  item.setAttribute(
     'aria-label',
     [folders ? folder : vnode.fullPath, ownBranch, ...badgeText].filter((part) => part !== '').join(' '),
   );
 
+  // REQ-TR-3, REQ-TR-4: every branch row carries its own always-visible actions button; a folder
+  // that is also a branch targets only that exact branch, never its descendants.
+  if (!folders || vnode.isLeaf) rowEl.append(actionsCell(vnode.fullPath, context.onActions));
+
   if (folders) {
-    // REQ-TR-4: the actions button targets this exact branch, never its descendants.
-    if (vnode.isLeaf) rowEl.append(actionsCell(vnode.fullPath, context.onActions));
     const group = element('div');
     group.setAttribute('role', 'group');
     if (isOpen(vnode.fullPath)) {
@@ -184,10 +192,10 @@ function row(
         group.append(row(child, level + 1, index + 1, vnode.children.length, context));
       });
     }
-    rowEl.append(group);
+    item.append(group);
   }
 
-  return rowEl;
+  return item;
 }
 
 function tree(section: TreeSection, context: Context): HTMLElement {
