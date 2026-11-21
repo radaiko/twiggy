@@ -200,7 +200,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 6. Wiring
 
-- [ ] 6.1 Mount, hook and content script
+- [x] 6.1 Mount, hook and content script
   - tier: hard
   - files: `src/ui/mount.ts`, `src/entrypoints/branches.content.ts`, `tests/ui-mount.test.ts`
   - deps: none
