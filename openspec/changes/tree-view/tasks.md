@@ -211,7 +211,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - The built `content-scripts/branches.js` still contains no `github.com` (the existing test must stay green).
     - `pnpm check` exits 0.
 
-- [ ] 6.2 End-to-end behaviour and no-network guard
+- [x] 6.2 End-to-end behaviour and no-network guard
   - tier: normal
   - files: `tests/tree-view-e2e.test.ts`, `tests/no-network.test.ts`
   - deps: none
