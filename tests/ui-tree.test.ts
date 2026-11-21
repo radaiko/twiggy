@@ -279,13 +279,13 @@ describe('branch rows', () => {
     );
     const [main, other] = found;
     expect([...main!.querySelectorAll('.twiggy-badge')].map((badge) => badge.textContent)).toEqual([
-      'Default',
-      'Protected',
+      COPY.defaultBadge,
+      COPY.protectedBadge,
     ]);
     expect(other!.querySelector('.twiggy-badge')).toBeNull();
     // The badges reach assistive technology through the row's name.
-    expect(main!.getAttribute('aria-label')).toContain('Default');
-    expect(other!.getAttribute('aria-label')).not.toContain('Default');
+    expect(main!.getAttribute('aria-label')).toContain(COPY.defaultBadge);
+    expect(other!.getAttribute('aria-label')).not.toContain(COPY.defaultBadge);
   });
 
   // @req REQ-TR-3
@@ -314,7 +314,7 @@ describe('a node that is both branch and folder', () => {
     expect(link.textContent).toBe(COPY.openBranch('feature'));
     expect(link.getAttribute('aria-label')).toBe(COPY.openBranch('feature'));
     expect(actionOf(row)!.getAttribute('aria-label')).toBe(COPY.actionsFor('feature'));
-    expect(row.getAttribute('aria-label')).toContain('Open branch feature');
+    expect(row.getAttribute('aria-label')).toContain(COPY.openBranch('feature'));
   });
 
   // @req REQ-TR-4
