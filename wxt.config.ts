@@ -3,6 +3,11 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   manifestVersion: 3,
+  // The sources zip exists for AMO review: tests and fixtures stay in, the screenshot
+  // evidence set does not.
+  zip: {
+    excludeSources: ['docs/evidence/**'],
+  },
   hooks: {
     'build:manifestGenerated': (_wxt, manifest) => {
       manifest.content_scripts = [
