@@ -21,6 +21,39 @@ It must exit 0 before any task is merged.
 to `main` and every pull request, then zips both targets and the Firefox sources
 and keeps them as artifacts. It uses no credentials and publishes nothing.
 
+## Version and releases
+
+`version` in `package.json` is the only place a version is written. WXT copies it
+into both manifests and into the zip filenames, so `.output/` holds
+`twiggy-<version>-chrome.zip`, `-firefox.zip` and `-sources.zip`, and the CI
+artifact is exactly those files. Nothing else may carry a version: do not add one
+to `wxt.config.ts`, do not rename a zip, do not edit `.output/`. Bump the field
+and rebuild.
+
+To cut a release:
+
+```sh
+pnpm version patch -m "chore: release %s"   # or minor / major
+git push --follow-tags
+```
+
+That writes `package.json`, commits it and creates the tag `v<version>`; the
+`main` push then builds the zips for that version. Use `minor` for new
+user-visible behaviour, `patch` for a fix that changes none, and `major` once
+something external depends on the current behaviour.
+
+The version must stay plain `X.Y.Z`. The Chrome Web Store takes only 1–4
+dot-separated integers of 0–65535, each upload strictly greater than the last,
+and rejects `-beta` and `+sha` suffixes. A prerelease in `package.json` is unsafe
+even for a local build: WXT puts only the numeric part in the manifest, so
+`0.1.1-dev.0` produces a zip of that name that installs as `0.1.1` and would take
+the `0.1.1` slot. Build identity before a release comes from the commit, not the
+version. Firefox accepts more, but keep one numeric format that satisfies both
+stores.
+
+The extension is `0.0.0` until the first release; from then on never reuse or
+lower a version that a store or a user already has.
+
 ## Hard constraints
 
 - No credentials of any kind: no personal access token, no GitHub App, no OAuth,
