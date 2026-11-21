@@ -64,7 +64,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 3. Collection
 
-- [ ] 3.1 Collector state machine
+- [x] 3.1 Collector state machine
   - tier: hard
   - files: `src/lib/collector.ts`, `tests/collector.test.ts`
   - deps: none
@@ -74,7 +74,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/collector.test.ts` with fake ports asserts: initial rows read before the first `step`; rows deduplicated per section; complete only with each of the three proofs and the proof is named; no new rows for the stall limit gives `partial: stalled` and never `complete`; `isManualScroll` true before a step ends `partial: manual-scroll` with no further `step`; `stop('button')` gives `partial: stop-button`; `cancel()` discards rows and ends `idle`; `resume()` keeps rows and continues; a pending step result arriving after `cancel()` is ignored; a native error indicator seen through the ports ends `partial: stalled`.
     - `pnpm check` exits 0.
 
-- [ ] 3.2 DOM ports: pagination advance, manual-scroll detection, anchor
+- [x] 3.2 DOM ports: pagination advance, manual-scroll detection, anchor
   - tier: hard
   - files: `src/lib/scroll-port.ts`, `tests/scroll-port.test.ts`
   - deps: none
