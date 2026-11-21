@@ -168,7 +168,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/tree-nav.test.ts` asserts every scenario of REQ-TA-3, REQ-TA-4 (prefix, cycling, 700ms reset) and REQ-TA-5 (ancestor focus on collapse, nearest visible ancestor on collapse all).
     - `pnpm check` exits 0.
 
-- [ ] 5.6 Wire keyboard and roving focus into the tree
+- [x] 5.6 Wire keyboard and roving focus into the tree
   - tier: normal
   - files: `src/ui/tree.ts`, `tests/ui-tree-keyboard.test.ts`
   - deps: none
