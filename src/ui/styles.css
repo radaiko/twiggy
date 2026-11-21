@@ -1,0 +1,427 @@
+/* Twiggy tree view — host Primer tokens with the DESIGN.md reference fallbacks. */
+
+.twiggy-root {
+  --twiggy-row-height: 44px;
+  --twiggy-indent: 20px;
+  --twiggy-icon-size: 16px;
+  --twiggy-target: 44px;
+  --twiggy-radius: var(--borderRadius-medium, 6px);
+  --twiggy-border: var(--borderColor-default, #d1d9e0);
+  --twiggy-muted-border: var(--borderColor-muted, #d1d9e0);
+  --twiggy-canvas: var(--bgColor-default, #ffffff);
+  --twiggy-ink: var(--fgColor-default, #1f2328);
+  --twiggy-muted-ink: var(--fgColor-muted, #59636e);
+  --twiggy-accent: var(--fgColor-accent, #0969da);
+  --twiggy-danger: var(--fgColor-danger, #d1242f);
+  --twiggy-success: var(--fgColor-success, #1a7f37);
+  --twiggy-focus: var(--focus-outlineColor, #0969da);
+  --twiggy-space-1: 4px;
+  --twiggy-space-2: 8px;
+  --twiggy-space-3: 12px;
+  --twiggy-space-4: 16px;
+  --twiggy-space-6: 24px;
+
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--twiggy-ink);
+  font-family: var(--fontStack-system, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.twiggy-root *,
+.twiggy-root *::before,
+.twiggy-root *::after {
+  box-sizing: border-box;
+}
+
+.twiggy-root :focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: 2px;
+}
+
+/* TreeToolbar */
+
+.twiggy-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--twiggy-space-2);
+  min-height: var(--twiggy-row-height);
+  padding-block: 0;
+  padding-inline: var(--twiggy-space-3);
+  border: 1px solid var(--twiggy-border);
+  border-radius: var(--twiggy-radius);
+  background-color: var(--twiggy-canvas);
+}
+
+.twiggy-toolbar-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--twiggy-space-2);
+  min-height: var(--twiggy-target);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.twiggy-toolbar-count {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+  margin-inline-end: var(--twiggy-space-3);
+}
+
+.twiggy-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--twiggy-space-2);
+  margin-inline-start: auto;
+}
+
+.twiggy-toolbar-button {
+  min-height: var(--twiggy-target);
+  padding-block: 0;
+  padding-inline: var(--twiggy-space-3);
+  border: 1px solid var(--twiggy-border);
+  border-radius: var(--twiggy-radius);
+  background-color: var(--twiggy-canvas);
+  color: var(--twiggy-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.twiggy-toolbar-button:hover {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+/* CollectionStatus: pinned at the viewport top of the window. */
+
+.twiggy-collection-status {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--bgColor-default, #ffffff);
+  border: 1px solid var(--bgColor-attention-muted, #fff8c5);
+  border-radius: var(--twiggy-radius);
+  padding: var(--twiggy-space-3);
+  margin-block: var(--twiggy-space-2);
+}
+
+.twiggy-collection-status-title {
+  font-weight: 600;
+}
+
+.twiggy-collection-status-detail {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.twiggy-collection-status-icon {
+  width: var(--twiggy-icon-size);
+  height: var(--twiggy-icon-size);
+  color: var(--twiggy-success);
+  transition: 120ms ease-out;
+}
+
+.twiggy-collection-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--twiggy-space-2);
+  margin-block-start: var(--twiggy-space-2);
+}
+
+.twiggy-collection-status-button {
+  min-height: var(--twiggy-target);
+  min-width: var(--twiggy-target);
+  padding-inline: var(--twiggy-space-3);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* BranchTree: the tree alone may scroll horizontally. */
+
+.twiggy-tree {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--twiggy-border);
+  border-radius: var(--twiggy-radius);
+  background-color: var(--twiggy-canvas);
+}
+
+.twiggy-section {
+  min-width: 0;
+}
+
+.twiggy-section-heading {
+  padding-block: var(--twiggy-space-2);
+  padding-inline: var(--twiggy-space-3);
+  font-weight: 600;
+  border-block-end: 1px solid var(--twiggy-muted-border);
+}
+
+/* FolderRow and BranchRow */
+
+.twiggy-row {
+  display: flex;
+  align-items: center;
+  gap: var(--twiggy-space-2);
+  min-height: 44px;
+  min-width: max-content;
+  padding-block: 0;
+  padding-inline-start: calc((var(--twiggy-level, 1) - 1) * var(--twiggy-indent));
+  border-block-end: 1px solid var(--twiggy-muted-border);
+}
+
+.twiggy-row:hover {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.twiggy-folder-row {
+  font-weight: 600;
+}
+
+.twiggy-branch-row {
+  font-weight: 400;
+}
+
+.twiggy-disclosure {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.twiggy-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--twiggy-muted-ink);
+}
+
+.twiggy-icon-chevron-right {
+  transform: none;
+}
+
+.twiggy-icon-chevron-down,
+.twiggy-icon-branch {
+  transform: none;
+}
+
+.twiggy-name {
+  flex: 1 1 auto;
+  min-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+  color: var(--twiggy-ink);
+}
+
+.twiggy-link {
+  min-height: var(--twiggy-target);
+  display: inline-flex;
+  align-items: center;
+  color: var(--twiggy-accent);
+  text-decoration: none;
+}
+
+.twiggy-link:hover {
+  text-decoration: underline;
+}
+
+.twiggy-count {
+  flex: none;
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+
+.twiggy-badge {
+  flex: none;
+  padding-inline: var(--twiggy-space-2);
+  border: 1px solid var(--twiggy-border);
+  border-radius: var(--twiggy-radius);
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.twiggy-actions-cell {
+  position: sticky;
+  inset-inline-end: 0;
+  flex: none;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bgColor-default, #ffffff);
+  border-inline-start: 1px solid var(--twiggy-muted-border);
+}
+
+.twiggy-actions-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--twiggy-muted-ink);
+  cursor: pointer;
+}
+
+.twiggy-actions-button:hover {
+  color: var(--twiggy-ink);
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+/* BranchActionsMenu: host overlay surface and shadow. */
+
+.twiggy-actions-menu {
+  position: absolute;
+  z-index: 2;
+  width: 224px;
+  padding-block: var(--twiggy-space-1);
+  margin: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--twiggy-border);
+  border-radius: var(--twiggy-radius);
+  background-color: var(--overlay-bgColor, #ffffff);
+  box-shadow: var(--shadow-floating-small, 0 0 0 1px rgba(31, 35, 40, 0.04), 0 8px 24px rgba(66, 74, 83, 0.12));
+}
+
+.twiggy-actions-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: var(--twiggy-target);
+  padding-inline: var(--twiggy-space-3);
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--twiggy-ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.twiggy-actions-menu-item:hover {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.twiggy-actions-menu-item[aria-disabled='true'] {
+  color: var(--twiggy-muted-ink);
+  cursor: default;
+}
+
+.twiggy-actions-menu-danger {
+  color: var(--twiggy-danger);
+}
+
+.twiggy-actions-menu-description {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.twiggy-actions-menu-divider {
+  height: 1px;
+  margin-block: var(--twiggy-space-1);
+  background-color: var(--twiggy-muted-border);
+}
+
+/* NativeActionHandoff */
+
+.twiggy-handoff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--twiggy-space-2);
+  padding: var(--twiggy-space-3);
+  background-color: var(--bgColor-attention-muted, #fff8c5);
+  border: 1px solid var(--twiggy-muted-border);
+  border-radius: var(--twiggy-radius);
+}
+
+.twiggy-handoff-text {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* TreeEmptyState */
+
+.twiggy-empty-state {
+  padding: var(--twiggy-space-6);
+  text-align: start;
+}
+
+.twiggy-empty-state-heading {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.twiggy-empty-state-detail {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+@media (max-width: 640px) {
+  .twiggy-toolbar {
+    flex-wrap: wrap;
+    padding-block: var(--twiggy-space-2);
+  }
+
+  .twiggy-toolbar-count {
+    margin-inline-start: 0;
+  }
+
+  .twiggy-toolbar-actions {
+    margin-inline-start: 0;
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twiggy-collection-status-icon {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .twiggy-root :focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+
+  .twiggy-actions-cell {
+    background-color: Canvas;
+    border-inline-start-color: CanvasText;
+  }
+}
