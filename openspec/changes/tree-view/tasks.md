@@ -188,7 +188,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/native-actions.test.ts` (jsdom, fixtures) asserts every scenario of REQ-BA-3 to REQ-BA-9, including confirmation-first handoff without confirming GitHub's dialog, no delete invocation for immediate behaviour, reveal-only for unknown behaviour even when research recorded confirmation-first, no URL constructed without a compare destination, and no `fetch` called.
     - `pnpm check` exits 0.
 
-- [ ] 5.8 Actions menu
+- [x] 5.8 Actions menu
   - tier: normal
   - files: `src/ui/actions-menu.ts`, `src/ui/tree.ts`, `tests/ui-actions-menu.test.ts`
   - deps: none
