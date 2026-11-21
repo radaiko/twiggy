@@ -4,8 +4,13 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "check": "wxt prepare && tsc --noEmit && wxt build && wxt build -b firefox && vitest run"
+    "check": "wxt prepare && tsc --noEmit && wxt build && wxt build -b firefox && vitest run",
+    "zip": "wxt zip && wxt zip -b firefox"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
