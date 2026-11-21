@@ -24,6 +24,11 @@ const SECTION_TABLE = 'table[aria-labelledby]';
 // Default badge — A7. Protection has no DOM at all on GitHub, so isProtected stays false.
 const DEFAULT_BADGE = '[data-component="Label"][data-variant="default"]';
 const DEFAULT_BADGE_TEXT = 'Default';
+// End of results and empty state — A4, A5.
+const PAGINATION = 'nav[aria-label="Pagination"]';
+const NEXT_PAGE = 'a[data-component="Pagination.NextPage"][rel="next"]';
+const BLANKSHELL_HEADING = 'h2[data-component="Blankslate.Heading"]';
+const BLANKSHELL_DESCRIPTION = 'p[data-component="Blankslate.Description"]';
 
 export type BranchView = 'all' | 'active' | 'stale' | 'yours' | 'overview';
 
@@ -117,4 +122,41 @@ export function findNativeRow(doc: Document, fullName: string): Element | null {
     if (row.name === fullName) return link.closest(BRANCH_ROW);
   }
   return null;
+}
+
+export type Completion =
+  | { kind: 'end-signal' }
+  | { kind: 'total-match' }
+  | { kind: 'confirmed-empty' }
+  | { kind: 'unknown' };
+
+// Context readCompletion cannot recover from the document alone: whether the current scope is a
+// paged list at all, and whether the page shown is the first one.
+export type CompletionContext = { pagedView: boolean; firstPage: boolean };
+
+export function readCompletion(
+  doc: Document,
+  rowCount: number,
+  context: CompletionContext = { pagedView: false, firstPage: true },
+): Completion {
+  // A5: the native explicit empty state, and only with zero rows, proves zero.
+  const heading = doc.querySelector(BLANKSHELL_HEADING)?.textContent?.trim();
+  const description = doc.querySelector(BLANKSHELL_DESCRIPTION)?.textContent?.trim();
+  if (rowCount === 0 && heading === 'No branches' && description?.startsWith('No branches match')) {
+    return { kind: 'confirmed-empty' };
+  }
+
+  // A4, both signals, only on a paged view and only past the first page. A4's real last page had no
+  // pager at all, but pager absence also describes views that never had one (A5, search, overview)
+  // and the inferred zero-result page 1 of `/all`, which A5's blankslate shows as not paginated. An
+  // absent Next is therefore never proof on page 1, and a disabled Next on page 1 is equally
+  // unproven. `total-match` has no source: A4 records the scoped total as ABSENT, so it is never
+  // returned until a total element is observed and read here.
+  const pager = doc.querySelector(PAGINATION);
+  if (!context.pagedView || context.firstPage) return { kind: 'unknown' };
+  if (!pager) return { kind: 'end-signal' };
+  const next = pager.querySelector(NEXT_PAGE);
+  return next?.getAttribute('aria-disabled') === 'true'
+    ? { kind: 'end-signal' }
+    : { kind: 'unknown' };
 }
