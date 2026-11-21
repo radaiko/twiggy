@@ -51,11 +51,12 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/native-reader-rows.test.ts` asserts: row counts and names for each fixture; default and protected flags; names containing `<`, `&` or quotes come back as raw text; two rows with the same name in different sections are both returned with their sections; `findNativeRow` for `release/1` does not return `release/10`; returned objects hold no DOM element.
     - `pnpm check` exits 0.
 
-- [ ] 2.3 Read the completion signal
+- [x] 2.3 Read the completion signal
   - tier: normal
   - files: `src/lib/native-reader.ts`, `tests/native-reader-completion.test.ts`
   - deps: none
   - reqs: REQ-BC-4
+  - amended: `readCompletion` takes an optional third `{pagedView, firstPage}` context (defaults `false`/`true`, which fails safe to `unknown`). A4's real last page has no pager, but search and overview never have one either, so the document alone cannot distinguish "finished" from "never paginated".
   - done:
     - Adds `readCompletion(doc, rowCount)` returning `{ kind: 'end-signal' } | { kind: 'total-match' } | { kind: 'confirmed-empty' } | { kind: 'unknown' }`, using only the signals recorded in the research note (A4, A5). If A4 is ABSENT it never returns `end-signal` or `total-match`.
     - `tests/native-reader-completion.test.ts` asserts: `vscode-all-end.html` gives the end proof or, if A4 is ABSENT, `unknown`; `vscode-all-first.html` gives `unknown`; `vscode-search-empty.html` gives `confirmed-empty`; a total that differs from `rowCount` gives `unknown`; an absent spinner on its own gives `unknown`.
