@@ -86,7 +86,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 4. Model
 
-- [ ] 4.1 Copy strings
+- [x] 4.1 Copy strings
   - tier: trivial
   - files: `src/lib/copy.ts`, `tests/copy.test.ts`
   - deps: none
@@ -96,7 +96,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/copy.test.ts` asserts every string equals the contract's text exactly, `scopeText` for 1 and many, complete and not, with and without a query, and that no string contains the word "all" outside the view name "All".
     - `pnpm check` exits 0.
 
-- [ ] 4.2 Tree view model and expansion memory
+- [x] 4.2 Tree view model and expansion memory
   - tier: normal
   - files: `src/lib/tree-view-model.ts`, `tests/tree-view-model.test.ts`
   - deps: none
