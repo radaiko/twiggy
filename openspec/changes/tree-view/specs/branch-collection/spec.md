@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how Twiggy obtains the full branch list for the current scope without any credential or API: by scrolling GitHub's own list in the tab and capturing rendered rows. It also defines when the result may be called complete, and what happens otherwise.
+Defines how Twiggy obtains the full branch list for the current scope without any credential or API: by walking GitHub's own pagination in the tab with its own Next control and capturing the rows rendered on each page. It also defines when the result may be called complete, and what happens otherwise.
 
 ## ADDED Requirements
 
@@ -17,16 +17,24 @@ Twiggy SHALL obtain branches only by reading the page DOM. Code under `src/lib` 
 - **WHEN** the built manifests are compared with those of `extension-foundation`
 - **THEN** `permissions`, `host_permissions` and `optional_host_permissions` are identical
 
-### Requirement: REQ-BC-2 Collection reads, then scrolls GitHub's list
-On activation Twiggy SHALL first read the rows already rendered, then scroll GitHub's actual list or page in this tab to trigger its lazy loading and capture rows after each step. It SHALL NOT open a hidden tab, fetch a page itself or click a pagination control that navigates away.
+### Requirement: REQ-BC-2 Collection reads a page, then advances GitHub's own pagination
+On activation Twiggy SHALL first read the rows already rendered, then advance to the next page by activating GitHub's own Next pagination control inside this tab and capturing each page's rows.
 
-#### Scenario: Initial rows are captured first
-- **WHEN** collection starts on a page with 30 rendered rows
-- **THEN** 30 branches are captured before any scroll step is made
+It SHALL NOT open a hidden tab, fetch or construct a page URL, or navigate away from the branches route. Progress SHALL be interruptible before each advance.
 
-#### Scenario: Rows loaded by scrolling are captured
-- **WHEN** a scroll step makes the native list render 30 more rows
-- **THEN** the collected count becomes 60
+Host behaviour, from `docs/research/github-branches-markup.md`: the list paginates in place, 20 rows per page.
+
+#### Scenario: Initial page is captured first
+- **WHEN** collection starts on a page with 20 rendered rows
+- **THEN** those 20 branches are captured before any advance is made
+
+#### Scenario: The next page's rows are captured
+- **WHEN** one advance replaces the list with the following page's 20 rows
+- **THEN** the collected count becomes 40
+
+#### Scenario: No page URL is constructed
+- **WHEN** the collection code is inspected
+- **THEN** it never builds a `?page=` URL and never calls `fetch`
 
 ### Requirement: REQ-BC-3 Rows are deduplicated per scope
 Collected rows SHALL be merged by exact full branch name within one scope and one native section.
