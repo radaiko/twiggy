@@ -31,7 +31,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
 
 ## 2. Reading GitHub's page
 
-- [ ] 2.1 Recognise the layout and read the scope
+- [x] 2.1 Recognise the layout and read the scope
   - tier: normal
   - files: `src/lib/native-reader.ts`, `tests/native-reader-layout.test.ts`
   - deps: none
