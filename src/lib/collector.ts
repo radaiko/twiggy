@@ -19,7 +19,7 @@ export type CollectorState = {
 
 export type CollectorPorts = {
   readRows: () => CollectedRow[];
-  // Optional context: whether this scope is a paged list and whether the shown page is the first.
+  // The caller supplies the paged-view context to readCompletion; the collector only passes the count.
   readCompletion: (rowCount: number) => Completion;
   // Resolves whether a further page arrived; false means GitHub's own pager reports the end.
   step: () => Promise<boolean>;

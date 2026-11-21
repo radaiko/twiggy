@@ -116,6 +116,7 @@ describe('createCollector', () => {
   });
 
   // @req REQ-BC-4
+  // @req REQ-BC-5
   it('completes with the named proof end-signal', () => {
     const { collector, harness } = serial([[row('main')]], [{ kind: 'end-signal' }]);
     return harness.run(collector).then(() => {
