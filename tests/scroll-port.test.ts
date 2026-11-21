@@ -37,9 +37,6 @@ class FakeWindow extends EventTarget {
   readonly scrollCalls: ScrollToOptions[] = [];
   readonly history = { pushState: vi.fn() };
   readonly location = { href: "https://github.com/microsoft/vscode/branches" };
-  fetch = vi.fn(() => {
-    throw new Error("fetch must never be called");
-  });
   // Resolved at call time so `vi.useFakeTimers()` applies to the ports' polling.
   setTimeout(handler: () => void, ms: number): number {
     return globalThis.setTimeout(handler, ms) as unknown as number;
@@ -78,6 +75,7 @@ afterEach(() => {
   for (const fn of cleanups.splice(0)) fn();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("isManualScroll", () => {
@@ -182,7 +180,7 @@ describe("captureAnchor and restoreAnchor", () => {
 describe("step", () => {
   // @req REQ-BC-2
   it("activates the Next control on vscode-all-first.html and reports a new page", async () => {
-    const { doc, win, ports, region } = setup("vscode-all-first.html");
+    const { doc, ports, region } = setup("vscode-all-first.html");
     cleanups.push(() => ports.dispose());
     let activation: { href: string } | null = null;
     doc.querySelector(NEXT)!.addEventListener("click", (event) => {
@@ -193,7 +191,7 @@ describe("step", () => {
 
     await expect(ports.step({ region })).resolves.toBe(true);
     expect(activation).toEqual({ href: "#2" });
-    expect(win.location.href).not.toContain("page=");
+    expect(window.location.href).not.toContain("page=");
   });
 
   // @req REQ-BC-4
@@ -225,30 +223,33 @@ describe("step", () => {
 
   // @req REQ-BC-2
   it("never calls fetch", async () => {
-    const { doc, win, ports, region } = setup("vscode-all-first.html");
+    const { doc, ports, region } = setup("vscode-all-first.html");
     cleanups.push(() => ports.dispose());
-    const fetchSpy = win.fetch as unknown as ReturnType<typeof vi.fn>;
+    // The real global, not the double: the port must not reach for fetch at all.
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
     doc.querySelector(NEXT)!.addEventListener("click", (event) => {
       event.preventDefault();
       setTimeout(() => swapRegion(doc), 10);
     });
     await expect(ports.step({ region })).resolves.toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(win.location.href).not.toContain("page=");
+    expect(window.location.href).not.toContain("page=");
   });
 
   // @req REQ-BC-2
   it("never assigns a page URL", async () => {
-    const { doc, win, ports, region } = setup("vscode-all-first.html");
+    const { doc, ports, region } = setup("vscode-all-first.html");
     cleanups.push(() => ports.dispose());
-    const pushState = win.history.pushState;
+    // The real jsdom history: a navigation would go through it.
+    const pushState = vi.spyOn(window.history, "pushState");
     doc.querySelector(NEXT)!.addEventListener("click", (event) => {
       event.preventDefault();
       setTimeout(() => swapRegion(doc), 10);
     });
     await expect(ports.step({ region })).resolves.toBe(true);
     expect(pushState).not.toHaveBeenCalled();
-    expect(win.location.href).not.toContain("page=");
+    expect(window.location.href).not.toContain("page=");
   });
 
   // @req REQ-BC-10
@@ -266,6 +267,37 @@ describe("step", () => {
     });
     await expect(ports.step({ region })).resolves.toBe(true);
     expect(doc.activeElement).toBe(input);
+  });
+});
+
+describe("step focus and repeated advance", () => {
+  // @req REQ-BC-10
+  it("does not leave focus on the Next link when nothing had focus", async () => {
+    const { doc, ports, region } = setup("vscode-all-first.html");
+    cleanups.push(() => ports.dispose());
+    (doc.activeElement as HTMLElement | null)?.blur();
+    expect(doc.activeElement).toBe(doc.body);
+    doc.querySelector(NEXT)!.addEventListener("click", (event) => {
+      event.preventDefault();
+      (event.target as HTMLElement).focus();
+      setTimeout(() => swapRegion(doc), 10);
+    });
+    await expect(ports.step({ region })).resolves.toBe(true);
+    expect(doc.activeElement).toBe(doc.body);
+  });
+
+  // @req REQ-BC-2
+  it("takes a fresh baseline when called again without a region", async () => {
+    const { doc, ports, region } = setup("vscode-all-first.html");
+    cleanups.push(() => ports.dispose());
+    doc.querySelector(NEXT)!.addEventListener("click", (event) => {
+      event.preventDefault();
+      setTimeout(() => swapRegion(doc), 10);
+    });
+    await expect(ports.step({ region })).resolves.toBe(true);
+    // The region node was replaced: a second step must not mistake the stale node for a change.
+    doc.querySelector(NEXT)!.addEventListener("click", (event) => event.preventDefault());
+    await expect(ports.step({ timeout: 200 })).resolves.toBe(false);
   });
 });
 

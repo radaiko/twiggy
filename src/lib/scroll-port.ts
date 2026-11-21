@@ -46,7 +46,8 @@ export function createScrollPorts(doc: Document, win: Window, region: Element) {
     if (SCROLL_KEYS.has((event as KeyboardEvent).key)) manual = true;
   };
   const onScroll = () => {
-    if (win.scrollY !== expected) manual = true;
+    // A browser may clamp or round the position it was asked for; that is still Twiggy's own.
+    if (expected === null || Math.abs(win.scrollY - expected) > 1) manual = true;
   };
 
   doc.addEventListener('wheel', setManual, true);
@@ -101,11 +102,16 @@ export function createScrollPorts(doc: Document, win: Window, region: Element) {
     const link = doc.querySelector(NEXT_PAGE);
     if (!link || disabled(link)) return false;
     const focus = doc.activeElement;
-    const before = snapshot(current);
+    const before = snapshot(liveRegion());
     (link as HTMLElement).click();
-    // REQ-BC-10: neither the click nor GitHub's handler may move focus.
-    if (focus && doc.activeElement !== focus) (focus as HTMLElement).focus?.();
-    return wait(before, options.timeout ?? STEP_TIMEOUT_MS);
+    const arrived = await wait(before, options.timeout ?? STEP_TIMEOUT_MS);
+    // REQ-BC-10: neither the click nor GitHub's async handler may move focus. Restore the
+    // element that had it when it survived the swap; otherwise drop focus the click claimed.
+    if (doc.activeElement !== focus) {
+      if (focus && focus !== doc.body && focus.isConnected) (focus as HTMLElement).focus?.();
+      else (doc.activeElement as HTMLElement | null)?.blur?.();
+    }
+    return arrived;
   };
 
   const dispose = () => {
