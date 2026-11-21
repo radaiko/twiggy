@@ -148,7 +148,7 @@ Every done bar ends with `pnpm check` exiting 0. A task touches only the files i
     - `tests/ui-status.test.ts` (jsdom) asserts every scenario of REQ-TB-6 (four strings, pinned, no `%`), REQ-BC-5 (no dismiss control, "collected" wording, no "Collection complete"), REQ-BC-6 (reason per cause), that REQ-BC-9's retry action is offered for each partial reason, REQ-TS-1 (both variants, no new-branch button) and REQ-BA-8 (both stale texts with the exact branch name).
     - `pnpm check` exits 0.
 
-- [ ] 5.4 Tree rows
+- [x] 5.4 Tree rows
   - tier: hard
   - files: `src/ui/tree.ts`, `tests/ui-tree.test.ts`
   - deps: none
