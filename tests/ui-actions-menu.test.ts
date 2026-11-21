@@ -406,6 +406,20 @@ describe('no invented forms', () => {
 
 describe('menu lifetime', () => {
   // @req REQ-BA-1
+  it('leaves no document listener behind after the trigger closes it', () => {
+    const remove = vi.spyOn(document, 'removeEventListener');
+    const el = renderedTree();
+    const trigger = el.querySelector<HTMLElement>('button[aria-haspopup="menu"]')!;
+    trigger.click();
+    remove.mockClear();
+    trigger.click();
+    const removedKeydown = remove.mock.calls.some(([type]) => type === 'keydown');
+    const removedPointerdown = remove.mock.calls.some(([type]) => type === 'pointerdown');
+    expect(removedKeydown).toBe(true);
+    expect(removedPointerdown).toBe(true);
+  });
+
+  // @req REQ-BA-1
   it('a second activation of the trigger closes the open menu instead of opening another', () => {
     const el = renderedTree();
     const trigger = el.querySelector<HTMLElement>('button[aria-haspopup="menu"]')!;
@@ -413,5 +427,8 @@ describe('menu lifetime', () => {
     expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
     trigger.click();
     expect(document.querySelectorAll('[role="menu"]')).toHaveLength(0);
+    // Closing through the trigger releases the menu, so it opens again next time.
+    trigger.click();
+    expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
   });
 });

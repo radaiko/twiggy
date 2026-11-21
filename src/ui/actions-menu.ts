@@ -95,14 +95,9 @@ export function openMenu(
   enabled()[0]?.focus();
 
   // Registered so the trigger's own activation closes this menu instead of opening another.
-  const self: Open = {
-    close: (focus) => {
-      if (focus) trigger.focus();
-      menu.remove();
-      trigger.removeAttribute('aria-expanded');
-      closed = true;
-    },
-  };
+  // It delegates to dismiss, which also drops the listeners and the registry entry, so the menu
+  // can be opened again afterwards.
+  const self: Open = { close: (focus) => dismiss(focus) };
   openMenus.set(trigger, self);
 
   // REQ-BA-1: a chosen entry is only reported; the menu never acts on it.
