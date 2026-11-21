@@ -61,6 +61,8 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
   let anchor: Anchor | null = null;
   // The page's own view of its state: the node in the document, not one this module kept.
   let region: Element | null = null;
+  // The node Twiggy hid, so it can be given back even after `region` moves on.
+  let hiddenNode: Element | null = null;
   let toolbarAnchor: Element | null = null;
   let toolbar: HTMLElement | null = null;
   let tree: HTMLElement | null = null;
@@ -298,6 +300,7 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     const replaces = REPLACES_NATIVE.has(view);
     inside.toggleAttribute('hidden', replaces);
     inside.toggleAttribute('inert', replaces);
+    hiddenNode = replaces ? inside : null;
 
     // The tree is drawn only when what it would draw changes, and stands in the results' place.
     const showTree = (view === 'tree-complete' || view === 'tree-partial') && state.rows.length > 0;
@@ -351,9 +354,13 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
   }
 
   function removeUi(): void {
-    // REQ-TR-11: the native region is never left hidden or inert behind a removed UI.
-    region?.removeAttribute('hidden');
-    region?.removeAttribute('inert');
+    // REQ-TR-11: the native region is never left hidden or inert behind a removed UI. The node
+    // that was hidden may no longer be the one `region` points at, so it is remembered.
+    (region ?? hiddenNode)?.removeAttribute('hidden');
+    (region ?? hiddenNode)?.removeAttribute('inert');
+    hiddenNode?.removeAttribute('hidden');
+    hiddenNode?.removeAttribute('inert');
+    hiddenNode = null;
     toolbar?.remove();
     tree?.remove();
     panel?.remove();

@@ -409,6 +409,23 @@ describe('mount', () => {
   });
 
   // @req REQ-TS-3
+  it('gives the native region back when the layout stops being recognised', async () => {
+    load('vscode-all-first.html');
+    const { win, wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html');
+    await settled();
+    await advance('vscode-all-end.html');
+    expect(hiddenNow()).toBe(true);
+
+    // GitHub re-renders into something Twiggy cannot read: the region must not stay hidden.
+    region().replaceWith(document.createElement('div'));
+    win.dispatchEvent(new Event('popstate'));
+    await settled();
+
+    expect(wired.view()).toBe('unsupported');
+    expect(twiggy()).toEqual([]);
+  });
+
+  // @req REQ-TS-3
   it('dispose removes every listener it added and unhides the region', async () => {
     load('vscode-all-first.html');
     // Page two has different rows; the last page has none after it and no pager (research A4).
