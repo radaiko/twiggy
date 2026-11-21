@@ -4,6 +4,9 @@
 export type PartialReason = 'manual-scroll' | 'stop-button' | 'stalled';
 
 export const COPY = {
+  // GitHub's own badge labels, shown on a branch row (REQ-TR-3).
+  defaultBadge: 'Default',
+  protectedBadge: 'Protected',
   switchLabel: 'Tree view',
   switchDescription: "Group branch names into folders. Turn off to use GitHub's list.",
   unsupportedSwitchDescription: 'Reload after GitHub finishes loading, or use the native list.',
