@@ -173,8 +173,10 @@ describe('stylesheet', () => {
   // emits, so nothing matched and the UI fell back to browser defaults.
   // @req REQ-TR-12
   it('styles only classes the components emit', () => {
-    const styled = new Set([...bare.matchAll(/\.(twiggy-[a-z-]+)/g)].map((m) => m[1]!));
-    const dead = [...styled].filter((name) => !source.includes(name));
+    const styled = new Set([...bare.matchAll(/\.(twiggy-[a-z0-9-]+)/g)].map((m) => m[1]!));
+    // Whole tokens, not substrings: `.twiggy-status` must not be satisfied by `twiggy-status-title`.
+    const emitted = new Set([...source.matchAll(/twiggy-[a-z0-9-]+/g)].map((m) => m[0]));
+    const dead = [...styled].filter((name) => !emitted.has(name));
     expect(dead).toEqual([]);
   });
 

@@ -245,6 +245,25 @@ describe('mount', () => {
     expect(inertNow()).toBe(false);
   });
 
+  // The shipped regression: nothing carried the class the whole stylesheet hangs its tokens on,
+  // so every token-based declaration was dropped and the UI fell back to browser defaults.
+  // @req REQ-TR-12
+  it('gives the token scope to each element it inserts', { timeout: 20000 }, async () => {
+    load('vscode-all-first.html');
+    setup('/microsoft/vscode/branches/all', 'vscode-active.html');
+    await settled();
+
+    const scoped = [...document.querySelectorAll<HTMLElement>('.twiggy-toolbar, .twiggy-status')];
+    expect(scoped.length).toBeGreaterThan(1);
+    for (const node of scoped) expect(node.className).toContain('twiggy-root');
+
+    await advance('vscode-all-end.html');
+    const holder = document.querySelector<HTMLElement>('.twiggy-tree');
+    expect(holder).not.toBeNull();
+    expect(holder!.className).toContain('twiggy-root');
+    expect(holder!.contains(tree())).toBe(true);
+  });
+
   // @req REQ-TR-11
   it('offers the collecting strip while GitHub pages and the tree once it is done', async () => {
     load('vscode-all-first.html');

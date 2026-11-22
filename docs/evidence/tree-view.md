@@ -178,10 +178,10 @@ Taken in the browser at 1280 px against the live page:
 
 | Property | Light | Dark | Contract |
 | --- | --- | --- | --- |
-| Row height | 44 px | 44 px | `twiggy.rowHeight` \u2265 44 |
-| Row controls (disclosure, actions) | 44 \u00d7 44 px | 44 \u00d7 44 px | REQ-TA-7, 44 \u00d7 44 |
+| Row height | 44 px | 44 px | `twiggy.rowHeight` ≥ 44 |
+| Row controls (disclosure, actions) | 44 × 44 px | 44 × 44 px | REQ-TA-7, 44 × 44 |
 | Toolbar and strip buttons | 32 px high | 32 px high | REQ-TA-7 covers row controls; these follow GitHub's own button size |
-| Text contrast | 15.8:1 | 17.4:1 | \u2265 4.5:1 |
+| Text contrast | 15.8:1 | 17.4:1 | ≥ 4.5:1 |
 | Focus outline | 2 px, 2 px offset | 2 px, 2 px offset | 3:1 against the adjacent surface |
 | Indent per level | 20 px | 20 px | `twiggy.indent` 20 px |
 | Actions cell | 44 px, sticky, opaque | same | REQ-TR-8 |
@@ -214,7 +214,7 @@ Taken in the browser at 1280 px against the live page:
    region surviving long enough for Twiggy's empty state to appear, so the state is reachable but
    not reliably reached. The requirement is therefore not met on the live page as shipped.
 2. **Branches overview (REQ-TR-10).** `/branches` renders no `section[aria-label="Branches"]`, so
-   Twiggy leaves the whole page untouched \u2014 no toolbar, no strip, no tree.
+   Twiggy leaves the whole page untouched — no toolbar, no strip, no tree.
 3. **Toolbar wrapping at 640 (REQ-TB-1).** The spec asks for two rows at about 640 px. At exactly
    640 px the four controls still fit on one row, so they do not wrap; nothing clips and nothing
    scrolls sideways. The wrap rule is present and takes effect when the scope text is longer, for
