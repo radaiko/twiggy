@@ -164,6 +164,9 @@ describe('stylesheet', () => {
   it('gives the menu a host overlay surface and the list and toolbar no shadow', () => {
     const menu = decls('.twiggy-actions-menu').replace(/\s+/g, ' ');
     expect(menu).toContain('width: 224px');
+    // The menu is placed in page coordinates, so it must stay absolute; the placement code adds
+    // the scroll offset and would double it under `fixed`.
+    expect(menu).toContain('position: absolute');
     expect(menu).toContain('var(--shadow-floating-small');
     expect(decls('.twiggy-tree')).not.toContain('box-shadow');
     expect(decls('.twiggy-toolbar')).not.toContain('box-shadow');
