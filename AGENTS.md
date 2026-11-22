@@ -5,8 +5,9 @@ Azure-DevOps-style folder tree, on github.com and GitHub Enterprise hosts.
 
 ## Integration branch
 
-`main`. Task branches merge into `main` with `--no-ff`. The repository is public
-and mirrored read-only to Forgejo.
+`main`. Each change's branch `change/<id>` lands in `main` through one pull
+request per change, merged by the human. The repository is public and mirrored
+read-only to Forgejo.
 
 ## Check command
 
@@ -64,5 +65,36 @@ lower a version that a store or a user already has.
 
 ## Spec workflow
 
-Changes live in `openspec/changes/`. Each change is dispatched task by task:
-`coder` implements one task, `review` gates it, the dispatcher merges and ticks.
+Every feature is an OpenSpec change in `openspec/changes/<id>`: proposal, design,
+delta specs and `tasks.md`. Each task states `tier`, `files`, `deps`, `reqs` and a
+done bar that ends with `pnpm check`, and changes only the files it lists.
+Validate with `openspec validate --all --strict --no-interactive`.
+
+The Dispatch bot in Orca coordinates each change. It plans, starts workers and
+reviews their reports; it writes no code, specs or tests and never merges.
+
+### Models
+
+| Role | Model |
+| --- | --- |
+| Spec, `core` domain | DeepSeek V4.1 Flash |
+| Spec, `ui` domain | GPT-6.2 Sol, after a design brief in `docs/design/<slug>.md` for a new surface, design system or redesign |
+| Spec, `architectural` domain | Claude Sonnet 5.5, medium effort |
+| Code, every tier | DeepSeek V4.1 Flash via opencode |
+| Review | Claude Sonnet 5.5, low effort (GPT-6.2 Sol if Sol wrote the code) |
+
+A spec worker touches only `openspec/` and `docs/`; the owner approves the spec
+before any code task starts.
+
+**Escalation.** Per task, two DeepSeek rounds (failed checks and review findings
+count together), then one GPT-6.2 Sol attempt with all findings so far, then stop
+and ask the human. No other models.
+
+### Branches and pull requests
+
+- One Orca workspace and one branch `change/<id>` per change, cut from `main`.
+- Each task is one commit on `change/<id>`. After review PASS the task is ticked
+  in `tasks.md` and the tick is committed.
+- When every task is ticked: `openspec archive <id>`, `pnpm check` once more,
+  push, and open one pull request per change to `main`. The human merges it.
+- Workers never merge and never force-push.
