@@ -1,4 +1,8 @@
-/* Twiggy tree view — host Primer tokens with the DESIGN.md reference fallbacks. */
+/* Twiggy tree view — host Primer tokens with the DESIGN.md reference fallbacks.
+ *
+ * `.twiggy-root` carries the tokens and the base type; every element the mount inserts gets it.
+ * Class names here are the ones the components emit: styles.test.ts fails on a rule that no
+ * component produces, so this file cannot drift into a dead generation again. */
 
 .twiggy-root {
   --twiggy-row-height: 44px;
@@ -9,12 +13,18 @@
   --twiggy-border: var(--borderColor-default, #d1d9e0);
   --twiggy-muted-border: var(--borderColor-muted, #d1d9e0);
   --twiggy-canvas: var(--bgColor-default, #ffffff);
+  --twiggy-surface-muted: var(--bgColor-muted, #f6f8fa);
   --twiggy-ink: var(--fgColor-default, #1f2328);
   --twiggy-muted-ink: var(--fgColor-muted, #59636e);
   --twiggy-accent: var(--fgColor-accent, #0969da);
   --twiggy-danger: var(--fgColor-danger, #d1242f);
   --twiggy-success: var(--fgColor-success, #1a7f37);
   --twiggy-focus: var(--focus-outlineColor, #0969da);
+  /* The host defines only the "-muted" surfaces, and in dark mode they are translucent. */
+  --twiggy-attention-surface: var(--bgColor-attention-muted, #fff8c5);
+  --twiggy-attention-border: var(--borderColor-attention-muted, #d4a72c);
+  --twiggy-progress-surface: var(--bgColor-accent-muted, #ddf4ff);
+  --twiggy-progress-border: var(--borderColor-accent-muted, #54aeff);
   --twiggy-space-1: 4px;
   --twiggy-space-2: 8px;
   --twiggy-space-3: 12px;
@@ -37,28 +47,32 @@
   box-sizing: border-box;
 }
 
+/* Paragraphs inside Twiggy carry no document flow of their own. */
+.twiggy-root p {
+  margin: 0;
+}
+
 .twiggy-root :focus-visible {
-  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline: 2px solid var(--twiggy-focus);
   outline-offset: 2px;
 }
 
-/* TreeToolbar */
+/* TreeToolbar: switch and scope on the left, the two buttons on the right. */
 
 .twiggy-toolbar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--twiggy-space-2);
   min-height: var(--twiggy-row-height);
-  padding-block: 0;
+  margin-block: var(--twiggy-space-2) 0;
   padding-inline: var(--twiggy-space-3);
   border: 1px solid var(--twiggy-border);
   border-radius: var(--twiggy-radius);
-  background-color: var(--twiggy-canvas);
+  background-color: var(--twiggy-surface-muted);
 }
 
-.twiggy-toolbar-switch {
+.twiggy-switch {
   display: inline-flex;
   align-items: center;
   gap: var(--twiggy-space-2);
@@ -67,80 +81,173 @@
   cursor: pointer;
 }
 
-.twiggy-toolbar-count {
+.twiggy-switch input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--twiggy-accent);
+}
+
+.twiggy-switch-description {
   color: var(--twiggy-muted-ink);
   font-size: 12px;
   line-height: 18px;
-  margin-inline-end: var(--twiggy-space-3);
+  font-weight: 400;
+}
+
+/* Muted, and it pushes the buttons to the right edge on its own. */
+.twiggy-scope {
+  margin-inline-end: auto;
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .twiggy-toolbar-actions {
   display: flex;
-  align-items: center;
+  flex: none;
   gap: var(--twiggy-space-2);
   margin-inline-start: auto;
 }
 
+/* Text buttons, as the design calls for: the toolbar carries one control besides the switch,
+ * so it does not need the weight of a bordered button. */
 .twiggy-toolbar-button {
-  min-height: var(--twiggy-target);
-  padding-block: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-height: 32px;
+  padding-inline: var(--twiggy-space-2);
+  border: 0;
+  border-radius: var(--twiggy-radius);
+  background: none;
+  color: var(--twiggy-accent);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.twiggy-toolbar-button:hover {
+  background-color: var(--twiggy-canvas);
+  text-decoration: underline;
+}
+
+/* A live region is announced, not seen. */
+.twiggy-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* CollectionStatus: pinned to the viewport top while it is on screen. */
+
+.twiggy-status {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-block: var(--twiggy-space-2);
+  padding: var(--twiggy-space-3) var(--twiggy-space-4);
+  border: 1px solid var(--twiggy-muted-border);
+  border-radius: var(--twiggy-radius);
+  background-color: var(--twiggy-canvas);
+  color: var(--twiggy-ink);
+}
+
+.twiggy-status-title {
+  font-weight: 600;
+}
+
+.twiggy-status-detail {
+  margin-block-start: var(--twiggy-space-1);
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.twiggy-status-count {
+  margin-block-start: var(--twiggy-space-1);
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.twiggy-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twiggy-space-2);
+  margin-block-start: var(--twiggy-space-3);
+}
+
+.twiggy-status-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--twiggy-target);
+  min-height: 32px;
   padding-inline: var(--twiggy-space-3);
   border: 1px solid var(--twiggy-border);
   border-radius: var(--twiggy-radius);
   background-color: var(--twiggy-canvas);
   color: var(--twiggy-ink);
   font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.twiggy-toolbar-button:hover {
-  background-color: var(--bgColor-muted, #f6f8fa);
+.twiggy-status-action:hover {
+  background-color: var(--twiggy-surface-muted);
+  border-color: var(--borderColor-neutral-muted, #afb8c1);
 }
 
-/* CollectionStatus: pinned at the viewport top of the window. */
+/* Collecting is work in progress; a partial tree is the warning. The tint goes over the opaque
+ * canvas as an inset shadow, because the host's tint tokens are translucent in dark mode and the
+ * strip is sticky over content that scrolls beneath it. */
+.twiggy-collecting {
+  border-color: var(--twiggy-progress-border);
+  box-shadow: inset 0 0 0 999px var(--twiggy-progress-surface);
+}
 
-.twiggy-collection-status {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background-color: var(--bgColor-default, #ffffff);
-  border: 1px solid var(--bgColor-attention-muted, #fff8c5);
-  border-radius: var(--twiggy-radius);
-  padding: var(--twiggy-space-3);
+.twiggy-partial,
+.twiggy-handoff-stale {
+  border-color: var(--twiggy-attention-border);
+  box-shadow: inset 0 0 0 999px var(--twiggy-attention-surface);
+}
+
+.twiggy-unsupported,
+.twiggy-handoff-stale {
+  color: var(--twiggy-muted-ink);
+}
+
+/* TreeEmptyState */
+
+.twiggy-empty {
   margin-block: var(--twiggy-space-2);
+  padding: var(--twiggy-space-6) var(--twiggy-space-4);
 }
 
-.twiggy-collection-status-title {
+.twiggy-empty-heading {
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 600;
 }
 
-.twiggy-collection-status-detail {
+.twiggy-empty-detail {
+  margin-block-start: var(--twiggy-space-1);
   color: var(--twiggy-muted-ink);
   font-size: 12px;
   line-height: 18px;
-}
-
-.twiggy-collection-status-icon {
-  width: var(--twiggy-icon-size);
-  height: var(--twiggy-icon-size);
-  color: var(--twiggy-success);
-  transition: 120ms ease-out;
-}
-
-.twiggy-collection-status-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--twiggy-space-2);
-  margin-block-start: var(--twiggy-space-2);
-}
-
-.twiggy-collection-status-button {
-  min-height: var(--twiggy-target);
-  min-width: var(--twiggy-target);
-  padding-inline: var(--twiggy-space-3);
-  font: inherit;
-  cursor: pointer;
 }
 
 /* BranchTree: the tree alone may scroll horizontally. */
@@ -151,6 +258,7 @@
   overflow-y: visible;
   max-width: 100%;
   min-width: 0;
+  margin-block: var(--twiggy-space-2);
   border: 1px solid var(--twiggy-border);
   border-radius: var(--twiggy-radius);
   background-color: var(--twiggy-canvas);
@@ -161,10 +269,10 @@
 }
 
 .twiggy-section-heading {
-  padding-block: var(--twiggy-space-2);
-  padding-inline: var(--twiggy-space-3);
-  font-weight: 600;
+  padding: var(--twiggy-space-2) var(--twiggy-space-3);
   border-block-end: 1px solid var(--twiggy-muted-border);
+  background-color: var(--twiggy-surface-muted);
+  font-weight: 600;
 }
 
 /* FolderRow and BranchRow */
@@ -173,15 +281,20 @@
   display: flex;
   align-items: center;
   gap: var(--twiggy-space-2);
-  min-height: 44px;
-  min-width: max-content;
-  padding-block: 0;
-  padding-inline-start: calc((var(--twiggy-level, 1) - 1) * var(--twiggy-indent));
+  width: 100%;
+  min-width: 0;
+  min-height: var(--twiggy-row-height);
+  padding-inline-end: 0;
+  padding-inline-start: calc(var(--twiggy-space-3) + (var(--twiggy-level, 1) - 1) * var(--twiggy-indent));
   border-block-end: 1px solid var(--twiggy-muted-border);
 }
 
+.twiggy-row:last-of-type {
+  border-block-end: 0;
+}
+
 .twiggy-row:hover {
-  background-color: var(--bgColor-muted, #f6f8fa);
+  background-color: var(--twiggy-surface-muted);
 }
 
 .twiggy-folder-row {
@@ -197,47 +310,57 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: var(--twiggy-target);
+  min-width: var(--twiggy-target);
+  height: var(--twiggy-target);
+  min-height: var(--twiggy-target);
   padding: 0;
   border: 0;
+  border-radius: var(--twiggy-radius);
   background: none;
-  color: inherit;
+  color: var(--twiggy-muted-ink);
   cursor: pointer;
 }
 
+.twiggy-disclosure:hover {
+  background-color: var(--twiggy-canvas);
+  color: var(--twiggy-ink);
+}
+
+/* A branch row has no disclosure: its spacer keeps the icons in one column. */
+span.twiggy-disclosure {
+  cursor: default;
+}
+
 .twiggy-icon {
-  width: 16px;
-  height: 16px;
   flex: none;
+  width: var(--twiggy-icon-size);
+  height: var(--twiggy-icon-size);
+  fill: currentColor;
   color: var(--twiggy-muted-ink);
 }
 
-.twiggy-icon-chevron-right {
-  transform: none;
-}
-
-.twiggy-icon-chevron-down,
-.twiggy-icon-branch {
-  transform: none;
-}
-
 .twiggy-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--twiggy-space-2);
   flex: 1 1 auto;
   min-width: 160px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
   color: var(--twiggy-ink);
 }
 
+.twiggy-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .twiggy-link {
-  min-height: var(--twiggy-target);
   display: inline-flex;
   align-items: center;
+  min-height: var(--twiggy-row-height);
   color: var(--twiggy-accent);
   text-decoration: none;
 }
@@ -248,7 +371,9 @@
 
 .twiggy-count {
   flex: none;
+  margin-inline-start: var(--twiggy-space-2);
   color: var(--twiggy-muted-ink);
+  font-family: var(--fontStack-system, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif);
   font-size: 12px;
   line-height: 18px;
   font-weight: 400;
@@ -258,8 +383,9 @@
   flex: none;
   padding-inline: var(--twiggy-space-2);
   border: 1px solid var(--twiggy-border);
-  border-radius: var(--twiggy-radius);
+  border-radius: 2em;
   color: var(--twiggy-muted-ink);
+  font-family: var(--fontStack-system, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif);
   font-size: 12px;
   line-height: 18px;
 }
@@ -267,42 +393,47 @@
 .twiggy-actions-cell {
   position: sticky;
   inset-inline-end: 0;
-  flex: none;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  background-color: var(--bgColor-default, #ffffff);
-  border-inline-start: 1px solid var(--twiggy-muted-border);
+  width: var(--twiggy-target);
+  min-width: var(--twiggy-target);
+  height: var(--twiggy-row-height);
+  min-height: var(--twiggy-row-height);
+  margin-inline-start: var(--twiggy-space-2);
+  background-color: var(--twiggy-canvas);
+}
+
+.twiggy-row:hover .twiggy-actions-cell {
+  background-color: var(--twiggy-surface-muted);
 }
 
 .twiggy-actions-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
   padding: 0;
   border: 0;
+  border-radius: var(--twiggy-radius);
   background: none;
   color: var(--twiggy-muted-ink);
   cursor: pointer;
 }
 
 .twiggy-actions-button:hover {
+  background-color: var(--twiggy-canvas);
   color: var(--twiggy-ink);
-  background-color: var(--bgColor-muted, #f6f8fa);
 }
 
-/* BranchActionsMenu: host overlay surface and shadow. */
+/* BranchActionsMenu */
 
 .twiggy-actions-menu {
-  position: absolute;
+  position: fixed;
   z-index: 2;
   width: 224px;
   padding-block: var(--twiggy-space-1);
@@ -317,10 +448,14 @@
 
 .twiggy-actions-menu-item {
   display: flex;
-  align-items: center;
-  min-height: var(--twiggy-target);
-  padding-inline: var(--twiggy-space-3);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   width: 100%;
+  min-height: 36px;
+  padding-block: var(--twiggy-space-1);
+  padding-inline: var(--twiggy-space-3);
+  line-height: 20px;
   border: 0;
   background: none;
   color: var(--twiggy-ink);
@@ -330,7 +465,7 @@
 }
 
 .twiggy-actions-menu-item:hover {
-  background-color: var(--bgColor-muted, #f6f8fa);
+  background-color: var(--twiggy-surface-muted);
 }
 
 .twiggy-actions-menu-item[aria-disabled='true'] {
@@ -354,62 +489,23 @@
   background-color: var(--twiggy-muted-border);
 }
 
-/* NativeActionHandoff */
-
-.twiggy-handoff {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--twiggy-space-2);
-  padding: var(--twiggy-space-3);
-  background-color: var(--bgColor-attention-muted, #fff8c5);
-  border: 1px solid var(--twiggy-muted-border);
-  border-radius: var(--twiggy-radius);
-}
-
-.twiggy-handoff-text {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-/* TreeEmptyState */
-
-.twiggy-empty-state {
-  padding: var(--twiggy-space-6);
-  text-align: start;
-}
-
-.twiggy-empty-state-heading {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-}
-
-.twiggy-empty-state-detail {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .twiggy-toolbar {
-    flex-wrap: wrap;
-    padding-block: var(--twiggy-space-2);
+    padding-block: var(--twiggy-space-1);
   }
 
-  .twiggy-toolbar-count {
-    margin-inline-start: 0;
+  /* The buttons fall to their own line once the scope and the switch fill the first. */
+  .twiggy-scope {
+    margin-inline-end: 0;
   }
 
   .twiggy-toolbar-actions {
     margin-inline-start: 0;
-    flex-wrap: wrap;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .twiggy-collection-status-icon {
+  .twiggy-root * {
     transition: none;
   }
 }
@@ -422,131 +518,5 @@
 
   .twiggy-actions-cell {
     background-color: Canvas;
-    border-inline-start-color: CanvasText;
   }
-}
-
-/* Class names the components emit. Kept in step with toolbar.ts and status.ts;
-   tests/styles.test.ts asserts both lists agree. */
-.twiggy-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--twiggy-space-2);
-  min-height: var(--twiggy-target);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.twiggy-switch-description {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.twiggy-scope {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-  margin-inline-end: var(--twiggy-space-3);
-}
-
-/* A live region is announced, not seen. */
-.twiggy-live {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-.twiggy-enable-scope {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.twiggy-toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--twiggy-target);
-  min-height: var(--twiggy-target);
-  padding-inline: var(--twiggy-space-2);
-  border: 1px solid var(--twiggy-border);
-  border-radius: var(--twiggy-radius);
-  background-color: transparent;
-  color: var(--twiggy-ink);
-  font: inherit;
-  cursor: pointer;
-}
-
-.twiggy-status {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background-color: var(--bgColor-default, #ffffff);
-  border: 1px solid var(--bgColor-attention-muted, #fff8c5);
-  border-radius: var(--twiggy-radius);
-  padding: var(--twiggy-space-3);
-  margin-block: var(--twiggy-space-2);
-}
-
-.twiggy-status-title {
-  font-weight: 600;
-}
-
-.twiggy-status-detail {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.twiggy-status-count {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.twiggy-status-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--twiggy-space-2);
-  margin-block-start: var(--twiggy-space-2);
-}
-
-.twiggy-status-action {
-  min-height: var(--twiggy-target);
-  min-width: var(--twiggy-target);
-}
-
-.twiggy-unsupported,
-.twiggy-handoff-stale {
-  color: var(--twiggy-muted-ink);
-}
-
-/* The collecting and partial strips are the status strip in its two tones. */
-.twiggy-collecting,
-.twiggy-partial {
-  border-color: var(--bgColor-attention-muted, #fff8c5);
-}
-
-.twiggy-empty {
-  padding: var(--twiggy-space-5);
-  text-align: start;
-}
-
-.twiggy-empty-heading {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-}
-
-.twiggy-empty-detail {
-  color: var(--twiggy-muted-ink);
-  font-size: 12px;
-  line-height: 18px;
 }

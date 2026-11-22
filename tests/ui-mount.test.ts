@@ -205,7 +205,9 @@ afterEach(() => {
 describe('mount', () => {
   // @req REQ-TR-11
   // @req REQ-TA-6
-  it('takes the results region for its tree and gives it back to GitHub when done', async () => {
+  // The fixtures are large and the mount settles through timers; 5 s is too tight on a loaded
+  // machine, which made this test flake in the full suite while passing alone.
+  it('takes the results region for its tree and gives it back to GitHub when done', { timeout: 20000 }, async () => {
     load('vscode-all-first.html');
     // Page two has different rows; the last page has none after it and no pager (research A4).
     const { wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html');

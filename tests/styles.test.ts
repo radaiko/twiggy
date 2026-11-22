@@ -1,14 +1,20 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
+const root = new URL('../', import.meta.url).pathname;
+const css = readFileSync(join(root, 'src/ui/styles.css'), 'utf8');
 const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+const ui = join(root, 'src/ui');
+const source = readdirSync(ui)
+  .filter((file) => file.endsWith('.ts'))
+  .map((file) => readFileSync(join(ui, file), 'utf8'))
+  .join('\n');
 
 /** Declarations of every rule whose selector list contains `selector`, joined. */
-function decls(selector: string, source = bare): string {
-  const blocks = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+function decls(selector: string, from = bare): string {
+  const blocks = [...from.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
   return blocks
     .filter(([, sel = '']) => sel.split(',').some((s) => s.trim() === selector))
     .map(([, , body = '']) => body)
@@ -59,45 +65,35 @@ describe('stylesheet', () => {
   });
 
   // @req REQ-TR-12
-  it('declares the collection icon transition and nothing else', () => {
-    const transitions = [...bare.matchAll(/(?:^|\})\s*([^{}]+?)\s*\{[^{}]*transition[^;]*;/g)];
-    expect(transitions).toHaveLength(1);
-    expect(transitions[0]?.[0]).toContain('.twiggy-collection-status-icon');
-    expect(transitions[0]?.[0].replace(/\s+/g, ' ')).toContain('transition: 120ms ease-out');
-    expect(bare.replace(/\s+/g, ' ')).not.toMatch(/transition[^;]*\b(transform|all)\b/);
-  });
-
-  // @req REQ-TR-12
-  it('makes the collection icon change immediate under reduced motion', () => {
-    const reduced = media('prefers-reduced-motion: reduce');
-    expect(reduced).toContain('.twiggy-collection-status-icon');
-    expect(decls('.twiggy-collection-status-icon', reduced).replace(/\s+/g, ' ')).toContain(
-      'transition: none',
-    );
+  it('animates nothing in the tree', () => {
+    expect(bare).not.toMatch(/transition[^;]*\b(transform|all)\b/);
+    expect(decls('.twiggy-row')).not.toContain('transition');
+    expect(decls('.twiggy-icon')).not.toContain('transition');
   });
 
   // @req REQ-TR-8
   it('gives rows a minimum height and an indent per level', () => {
-    expect(decls('.twiggy-row').replace(/\s+/g, ' ')).toContain('min-height: 44px');
+    expect(decls('.twiggy-row').replace(/\s+/g, ' ')).toContain('min-height: var(--twiggy-row-height)');
+    expect(css.replace(/\s+/g, ' ')).toContain('--twiggy-row-height: 44px');
     expect(css.replace(/\s+/g, ' ')).toContain('--twiggy-indent: 20px');
     expect(decls('.twiggy-row').replace(/\s+/g, ' ')).toMatch(
-      /padding-inline-start: calc\(\s*\(\s*var\(--twiggy-level[^)]*\)\s*-\s*1\s*\)\s*\*\s*var\(--twiggy-indent\)\s*\)/,
+      /padding-inline-start: calc\([^;]*var\(--twiggy-level, 1\) - 1\) \* var\(--twiggy-indent\)\)/,
     );
   });
 
   // @req REQ-TR-8
-  it('pins an opaque 44px actions cell and keeps a 160px name with one-line ellipsis', () => {
+  it('pins an opaque 44px actions cell and keeps the name to one ellipsised line', () => {
     const cell = decls('.twiggy-actions-cell').replace(/\s+/g, ' ');
     expect(cell).toContain('position: sticky');
     expect(cell).toContain('inset-inline-end: 0');
-    expect(cell).toContain('width: 44px');
-    expect(cell).toContain('min-width: 44px');
-    expect(cell).toContain('background-color: var(--bgColor-default, #ffffff)');
+    expect(cell).toContain('width: var(--twiggy-target)');
+    expect(cell).toContain('background-color: var(--twiggy-canvas)');
     const name = decls('.twiggy-name').replace(/\s+/g, ' ');
     expect(name).toContain('min-width: 160px');
-    expect(name).toContain('white-space: nowrap');
-    expect(name).toContain('overflow: hidden');
-    expect(name).toContain('text-overflow: ellipsis');
+    const label = decls('.twiggy-label').replace(/\s+/g, ' ');
+    expect(label).toContain('white-space: nowrap');
+    expect(label).toContain('overflow: hidden');
+    expect(label).toContain('text-overflow: ellipsis');
   });
 
   // @req REQ-TR-8
@@ -110,22 +106,23 @@ describe('stylesheet', () => {
 
   // @req REQ-TA-7
   it('gives row controls a 44 by 44 target with 16px icons', () => {
-    for (const selector of ['.twiggy-disclosure', '.twiggy-actions-button']) {
-      const rule = decls(selector).replace(/\s+/g, ' ');
-      expect(rule, selector).toContain('min-width: 44px');
-      expect(rule, selector).toContain('min-height: 44px');
-      expect(rule, selector).toContain('width: 44px');
-      expect(rule, selector).toContain('height: 44px');
+    const disclosure = decls('.twiggy-disclosure').replace(/\s+/g, ' ');
+    for (const property of ['min-width', 'min-height', 'width', 'height']) {
+      expect(disclosure, property).toContain(`${property}: var(--twiggy-target)`);
     }
+    const cell = decls('.twiggy-actions-cell').replace(/\s+/g, ' ');
+    expect(cell).toContain('width: var(--twiggy-target)');
+    expect(cell).toContain('height: var(--twiggy-row-height)');
     const icon = decls('.twiggy-icon').replace(/\s+/g, ' ');
-    expect(icon).toContain('width: 16px');
-    expect(icon).toContain('height: 16px');
+    expect(icon).toContain('width: var(--twiggy-icon-size)');
+    expect(icon).toContain('height: var(--twiggy-icon-size)');
+    expect(css.replace(/\s+/g, ' ')).toContain('--twiggy-icon-size: 16px');
   });
 
   // @req REQ-TA-7
   it('shows focus with a 2px outline at 2px offset', () => {
     const focus = decls('.twiggy-root :focus-visible').replace(/\s+/g, ' ');
-    expect(focus).toContain('outline: 2px solid var(--focus-outlineColor, #0969da)');
+    expect(focus).toContain('outline: 2px solid var(--twiggy-focus)');
     expect(focus).toContain('outline-offset: 2px');
   });
 
@@ -139,20 +136,28 @@ describe('stylesheet', () => {
   });
 
   // @req REQ-TR-8
-  it('wraps the toolbar at 640px', () => {
-    const narrow = media('max-width: 640px');
-    const toolbar = decls('.twiggy-toolbar', narrow).replace(/\s+/g, ' ');
-    expect(toolbar).toContain('flex-wrap: wrap');
-    expect(decls('.twiggy-toolbar-count', narrow)).not.toBe('');
-    expect(decls('.twiggy-toolbar-actions', narrow)).not.toBe('');
+  it('wraps the toolbar and the status actions on a narrow viewport', () => {
+    const narrow = media('max-width: 700px');
+    expect(narrow).not.toBe('');
+    expect(decls('.twiggy-scope', narrow).replace(/\s+/g, ' ')).toContain('margin-inline-end: 0');
+    expect(decls('.twiggy-status-actions').replace(/\s+/g, ' ')).toContain('flex-wrap: wrap');
+    expect(decls('.twiggy-toolbar').replace(/\s+/g, ' ')).toContain('flex-wrap: wrap');
   });
 
-  // @req REQ-TR-12
-  it('pins the collection status strip to the viewport top', () => {
-    const strip = decls('.twiggy-collection-status').replace(/\s+/g, ' ');
+  // @req REQ-TB-6
+  it('pins the status strip to the viewport top on an opaque surface', () => {
+    const strip = decls('.twiggy-status').replace(/\s+/g, ' ');
     expect(strip).toContain('position: sticky');
     expect(strip).toContain('top: 0');
-    expect(strip).toContain('background-color: var(--bgColor-default, #ffffff)');
+    expect(strip).toContain('background-color: var(--twiggy-canvas)');
+  });
+
+  // @req REQ-BC-5
+  it('tells collecting and partial apart by surface, not by words alone', () => {
+    expect(decls('.twiggy-collecting').replace(/\s+/g, ' ')).toContain('box-shadow: inset 0 0 0 999px var(--twiggy-progress-surface)');
+    expect(decls('.twiggy-partial').replace(/\s+/g, ' ')).toContain('box-shadow: inset 0 0 0 999px var(--twiggy-attention-surface)');
+    // The strip stays opaque under its tint: it is sticky over scrolling content.
+    expect(decls('.twiggy-status').replace(/\s+/g, ' ')).toContain('background-color: var(--twiggy-canvas)');
   });
 
   // @req REQ-TR-12
@@ -164,57 +169,22 @@ describe('stylesheet', () => {
     expect(decls('.twiggy-toolbar')).not.toContain('box-shadow');
   });
 
+  // The regression that shipped: a stylesheet full of rules for class names no component
+  // emits, so nothing matched and the UI fell back to browser defaults.
   // @req REQ-TR-12
-  it('defines every twiggy- class of the eight components', () => {
-    for (const name of [
-      'twiggy-toolbar',
-      'twiggy-toolbar-switch',
-      'twiggy-toolbar-count',
-      'twiggy-toolbar-actions',
-      'twiggy-collection-status',
-      'twiggy-collection-status-icon',
-      'twiggy-tree',
-      'twiggy-section',
-      'twiggy-folder-row',
-      'twiggy-branch-row',
-      'twiggy-disclosure',
-      'twiggy-icon',
-      'twiggy-name',
-      'twiggy-count',
-      'twiggy-link',
-      'twiggy-badge',
-      'twiggy-actions-cell',
-      'twiggy-actions-button',
-      'twiggy-actions-menu',
-      'twiggy-actions-menu-item',
-      'twiggy-actions-menu-danger',
-      'twiggy-actions-menu-description',
-      'twiggy-handoff',
-      'twiggy-empty-state',
-      'twiggy-empty-state-heading',
-      'twiggy-empty-state-detail',
-    ]) {
-      expect(css, name).toContain(`.${name}`);
-    }
+  it('styles only classes the components emit', () => {
+    const styled = new Set([...bare.matchAll(/\.(twiggy-[a-z-]+)/g)].map((m) => m[1]!));
+    const dead = [...styled].filter((name) => !source.includes(name));
+    expect(dead).toEqual([]);
   });
-});
 
-// The stylesheet and the components must name the same classes; drift here leaves the strips and
-// the empty state unstyled.
-describe("component class coverage", () => {
-  const components = ["src/ui/toolbar.ts", "src/ui/status.ts"];
-  const root = new URL('../', import.meta.url).pathname;
-
-  it("defines every twiggy- class the components emit", () => {
-    const emitted = new Set<string>();
-    for (const file of components) {
-      for (const match of readFileSync(join(root, file), "utf8").matchAll(/twiggy-[a-z-]+/g)) {
-        emitted.add(match[0]);
-      }
+  // @req REQ-TR-12
+  it('gives the token scope to every element the mount inserts', () => {
+    const mount = readFileSync(join(ui, 'mount.ts'), 'utf8');
+    expect(mount).toContain("classList.add('twiggy-root')");
+    // Toolbar, tree, the status panel and the stale handoff all go through the scope helper.
+    for (const call of ['renderToolbar', 'renderTree', 'renderPartial', 'renderCollecting', 'renderEmpty', 'renderUnsupported', 'renderHandoffStale']) {
+      expect(mount, call).toMatch(new RegExp(`scoped\\(\\s*${call}\\(`));
     }
-    // Word-boundary match, so `.twiggy-empty-state` does not satisfy an emitted `twiggy-empty`.
-    const defined = (name: string) => new RegExp(`\\.${name}(?![\\w-])`).test(css);
-    const missing = [...emitted].filter((name) => !defined(name));
-    expect(missing).toEqual([]);
   });
 });
