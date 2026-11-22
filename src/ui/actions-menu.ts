@@ -51,7 +51,9 @@ export function openMenu(
   }
 
   const menu = doc.createElement('div');
-  menu.className = MENU_CLASS;
+  // The menu is appended to the page body, outside the tree the mount scoped, so it carries the
+  // token scope itself.
+  menu.className = `${MENU_CLASS} twiggy-root`;
   menu.setAttribute('role', 'menu');
   menu.setAttribute('aria-label', COPY.actionsFor(fullName));
 

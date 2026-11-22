@@ -221,7 +221,7 @@ function row(
 
   if (folders) {
     // The label and the disclosure both toggle; the count stays a muted sibling.
-    const label = element('span', undefined, `${vnode.name}/`, doc);
+    const label = element('span', 'twiggy-label', `${vnode.name}/`, doc);
     label.addEventListener('click', toggleFolder);
     name.append(label, ' ', count!);
     rowEl.append(name);

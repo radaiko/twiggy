@@ -106,7 +106,10 @@ export function renderToolbar(input: ToolbarState, handlers: ToolbarHandlers): H
     collapse.className = 'twiggy-toolbar-button';
     collapse.textContent = COPY.collapseAll;
     collapse.addEventListener('click', () => handlers.onCollapseAll());
-    toolbar.append(expand, collapse);
+    const actions = doc.createElement('div');
+    actions.className = 'twiggy-toolbar-actions';
+    actions.append(expand, collapse);
+    toolbar.append(actions);
   }
 
   return toolbar;

@@ -102,6 +102,9 @@ describe('REQ-BA-1 actions menu', () => {
     const onChoose = vi.fn();
     openMenu(button, NAME, availability(), onChoose);
     expect(menu().getAttribute('aria-label')).toBe(COPY.actionsFor(NAME));
+    // The menu is appended to the body, outside the tree the mount scoped, so it carries the
+    // token scope itself.
+    expect(menu().classList).toContain('twiggy-root');
     expect(labels()).toEqual([COPY.compare, COPY.rename, COPY.delete]);
     // The divider sits between Rename and Delete and is not an entry itself.
     const children = [...menu().children];

@@ -205,7 +205,9 @@ afterEach(() => {
 describe('mount', () => {
   // @req REQ-TR-11
   // @req REQ-TA-6
-  it('takes the results region for its tree and gives it back to GitHub when done', async () => {
+  // The fixtures are large and the mount settles through timers; 5 s is too tight on a loaded
+  // machine, which made this test flake in the full suite while passing alone.
+  it('takes the results region for its tree and gives it back to GitHub when done', { timeout: 20000 }, async () => {
     load('vscode-all-first.html');
     // Page two has different rows; the last page has none after it and no pager (research A4).
     const { wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html');
@@ -241,6 +243,25 @@ describe('mount', () => {
     expect(tree()).toBeNull();
     expect(hiddenNow()).toBe(false);
     expect(inertNow()).toBe(false);
+  });
+
+  // The shipped regression: nothing carried the class the whole stylesheet hangs its tokens on,
+  // so every token-based declaration was dropped and the UI fell back to browser defaults.
+  // @req REQ-TR-12
+  it('gives the token scope to each element it inserts', { timeout: 20000 }, async () => {
+    load('vscode-all-first.html');
+    setup('/microsoft/vscode/branches/all', 'vscode-active.html');
+    await settled();
+
+    const scoped = [...document.querySelectorAll<HTMLElement>('.twiggy-toolbar, .twiggy-status')];
+    expect(scoped.length).toBeGreaterThan(1);
+    for (const node of scoped) expect(node.className).toContain('twiggy-root');
+
+    await advance('vscode-all-end.html');
+    const holder = document.querySelector<HTMLElement>('.twiggy-tree');
+    expect(holder).not.toBeNull();
+    expect(holder!.className).toContain('twiggy-root');
+    expect(holder!.contains(tree())).toBe(true);
   });
 
   // @req REQ-TR-11

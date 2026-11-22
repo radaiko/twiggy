@@ -27,10 +27,10 @@ describe('acceptance evidence', () => {
       'empty-search',
       'off-native-list',
       'actions-menu',
-      'handoff-compare',
-      'handoff-rename',
-      'handoff-delete',
+      'expansion-chain',
       'expansion-chain-expanded',
+      'focus-ring',
+      'overview-landing',
     ]) {
       expect(note).toContain(`### ${state}`);
     }
@@ -46,11 +46,20 @@ describe('acceptance evidence', () => {
     expect(note).toContain('partial, not complete');
   });
 
+  it('names the states it could not capture instead of implying them', () => {
+    // @req REQ-BA-1
+    const note = readFileSync(evidence, 'utf8');
+    expect(note).toContain('A native handoff (Compare, Rename, Delete)');
+    expect(note).toContain('not captured');
+  });
+
   it('claims nothing it did not observe', () => {
     // @req REQ-BC-5, REQ-TR-9
     const note = readFileSync(evidence, 'utf8');
     // The run never proved completeness on the whole-repo scope, so it must not say it did.
     expect(note).not.toMatch(/collection completed/i);
     expect(note).toContain('not observed');
+    // No screenshot exists for a handoff, so the note must not present one as captured.
+    expect(note).not.toMatch(/^### handoff-/m);
   });
 });

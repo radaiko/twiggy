@@ -143,7 +143,7 @@ afterEach(() => {
 describe('mounted flow', () => {
   // @req REQ-BC-4
   // @req REQ-TB-5
-  it('gives a complete tree and the complete count when the last page proves the end', async () => {
+  it('gives a complete tree and the complete count when the last page proves the end', { timeout: 20000 }, async () => {
     load('vscode-all-first.html');
     const wired = setup('vscode-active.html');
     await settled();

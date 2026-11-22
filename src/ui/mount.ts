@@ -164,11 +164,20 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     return names.map((section) => ({ section, rows: rows.filter((row) => row.section === section) }));
   }
 
+  // Every element the mount inserts carries the design-token scope; without it the
+  // stylesheet's token declarations do not apply and the UI falls back to browser defaults.
+  function scoped<T extends HTMLElement | null>(node: T): T {
+    node?.classList.add('twiggy-root');
+    return node;
+  }
+
   // REQ-BA-8: a control GitHub no longer offers is named exactly, never guessed at.
   function showStale(fullName: string, result: Result): void {
-    const node = renderHandoffStale(
-      { name: fullName, rowGone: !result.ok && result.reason === 'row-gone' },
-      { onShowList: showNativeRow },
+    const node = scoped(
+      renderHandoffStale(
+        { name: fullName, rowGone: !result.ok && result.reason === 'row-gone' },
+        { onShowList: showNativeRow },
+      ),
     );
     if (stale !== null) stale.node.replaceWith(node);
     else toolbar?.after(node);
@@ -210,7 +219,7 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
 
   function drawToolbar(): void {
     if (toolbar !== null && !toolbar.isConnected) toolbar = null;
-    const element = renderToolbar(
+    const element = scoped(renderToolbar(
       { state: view, rows: state.rows, outcome: state.outcome, scope: state.scope, switchOn: state.switchOn },
       {
         onSwitch: (on) => {
@@ -232,7 +241,7 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
           render();
         },
       },
-    );
+    ));
     if (element === null) return;
     if (toolbar !== null) {
       if (toolbar.isEqualNode(element)) return;
@@ -312,7 +321,7 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
       if (tree !== null && !tree.isConnected) tree = null;
       if (tree === null || drawn !== signature()) {
         tree?.remove();
-        tree = renderTree(sections(state.rows), expansion, {
+        tree = scoped(renderTree(sections(state.rows), expansion, {
           scope: state.scope?.key ?? '',
           incomplete: view !== 'tree-complete',
           badges: Object.fromEntries(readRows(doc).map((row) => [row.name, { isDefault: row.isDefault, isProtected: row.isProtected }])),
@@ -326,7 +335,7 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
           onActions: (fullPath, entry) => {
             if (entry) handOff(fullPath, entry);
           },
-        });
+        }));
         (IN_PLACE.has(view) ? inside : current.anchor).before(tree);
         drawn = signature();
         // REQ-TA-5: a recollection that removed the active row hands focus to the toolbar or the
@@ -341,11 +350,11 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
 
     // REQ-BC-5, REQ-TB-6: one panel above the tree, for the one state that shows it.
     let next: HTMLElement | null = null;
-    if (view === 'tree-partial') next = renderPartial(state.outcome?.reason ?? 'stalled', state.rows.length, panelActions());
-    else if (view === 'partial-empty') next = renderPartial(state.outcome?.reason ?? 'stalled', 0, panelActions());
-    else if (view === 'collecting') next = renderCollecting(state.rows.length, { onStop: stopByButton });
-    else if (view === 'empty') next = renderEmpty({ hasQuery: Boolean(state.scope?.query) });
-    else if (view === 'unsupported') next = renderUnsupported();
+    if (view === 'tree-partial') next = scoped(renderPartial(state.outcome?.reason ?? 'stalled', state.rows.length, panelActions()));
+    else if (view === 'partial-empty') next = scoped(renderPartial(state.outcome?.reason ?? 'stalled', 0, panelActions()));
+    else if (view === 'collecting') next = scoped(renderCollecting(state.rows.length, { onStop: stopByButton }));
+    else if (view === 'empty') next = scoped(renderEmpty({ hasQuery: Boolean(state.scope?.query) }));
+    else if (view === 'unsupported') next = scoped(renderUnsupported());
     if (panel !== null && (next === null || !panel.isEqualNode(next))) {
       panel.remove();
       panel = null;
