@@ -5,8 +5,9 @@ Azure-DevOps-style folder tree, on github.com and GitHub Enterprise hosts.
 
 ## Integration branch
 
-`main`. Task branches merge into `main` with `--no-ff`. The repository is public
-and mirrored read-only to Forgejo.
+`main`. Each change's branch `change/<id>` lands in `main` through one pull
+request per change, merged by the human. The repository is public and mirrored
+read-only to Forgejo.
 
 ## Check command
 
