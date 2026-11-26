@@ -20,6 +20,9 @@ describe('acceptance evidence', () => {
     // @req REQ-TR-6
     const note = readFileSync(evidence, 'utf8');
     for (const state of [
+      'complete-three-levels',
+      'collapsed-500',
+      'twelve-levels',
       'whole-repo-partial',
       'collecting-stop-control',
       'partial-stop',
@@ -27,6 +30,7 @@ describe('acceptance evidence', () => {
       'empty-search',
       'off-native-list',
       'actions-menu',
+      'native-handoff',
       'expansion-chain',
       'expansion-chain-expanded',
       'focus-ring',
