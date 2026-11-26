@@ -22,6 +22,12 @@ It must exit 0 before any task is merged.
 to `main` and every pull request, then zips both targets and the Firefox sources
 and keeps them as artifacts. It uses no credentials and publishes nothing.
 
+`.github/workflows/release.yml` is the store pipeline. It runs only on a `v*` tag
+or a manual dry run, verifies the tag against `package.json`, runs `pnpm check`,
+and submits the same zips to the Chrome Web Store and Firefox AMO using the
+`release` environment's secrets. See `docs/release.md` for the one-time setup and
+the retry rules.
+
 ## Version and releases
 
 `version` in `package.json` is the only place a version is written. WXT copies it
@@ -38,10 +44,11 @@ pnpm version patch -m "chore: release %s"   # or minor / major
 git push --follow-tags
 ```
 
-That writes `package.json`, commits it and creates the tag `v<version>`; the
-`main` push then builds the zips for that version. Use `minor` for new
-user-visible behaviour, `patch` for a fix that changes none, and `major` once
-something external depends on the current behaviour.
+That writes `package.json`, commits it and creates the tag `v<version>`; the tag
+push then runs the release workflow, which builds the zips and submits them to
+both stores. Use `minor` for new user-visible behaviour, `patch` for a fix that
+changes none, and `major` once something external depends on the current
+behaviour.
 
 The version must stay plain `X.Y.Z`. The Chrome Web Store takes only 1–4
 dot-separated integers of 0–65535, each upload strictly greater than the last,

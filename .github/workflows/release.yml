@@ -1,0 +1,110 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and verify without uploading
+        type: boolean
+        default: true
+      chrome:
+        description: Submit to Chrome Web Store
+        type: boolean
+        default: true
+      firefox:
+        description: Submit to Firefox AMO
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Scope the store secrets to this environment and add required reviewers in
+    # GitHub → Settings → Environments → release.
+    environment: release
+    env:
+      # Chrome Web Store API. The CLI reads these exact names.
+      CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+      CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+      REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+      EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+      PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+      # AMO API. web-ext reads these exact names.
+      WEB_EXT_API_KEY: ${{ secrets.AMO_API_KEY }}
+      WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || {
+            echo "::error::tag $GITHUB_REF_NAME does not match v$version"
+            exit 1
+          }
+
+      - name: Require store credentials for a tagged release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          missing=0
+          for name in CLIENT_ID CLIENT_SECRET REFRESH_TOKEN EXTENSION_ID PUBLISHER_ID WEB_EXT_API_KEY WEB_EXT_API_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - run: pnpm check
+      - run: pnpm zip
+
+      - name: Upload the build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-zips
+          path: |
+            .output/*-chrome.zip
+            .output/*-firefox.zip
+            .output/*-sources.zip
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Publish to Chrome Web Store
+        if: ${{ inputs.dry_run != true && inputs.chrome != false && env.CLIENT_ID != '' && env.CLIENT_SECRET != '' && env.REFRESH_TOKEN != '' && env.EXTENSION_ID != '' && env.PUBLISHER_ID != '' }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          pnpm exec chrome-webstore-upload --source ".output/twiggy-${version}-chrome.zip"
+
+      - name: Submit to Firefox AMO
+        if: ${{ inputs.dry_run != true && inputs.firefox != false && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          pnpm exec web-ext sign \
+            --source-dir .output/firefox-mv3 \
+            --artifacts-dir .output/amo \
+            --channel listed \
+            --approval-timeout 0 \
+            --timeout 600000 \
+            --upload-source-code ".output/twiggy-${version}-sources.zip"
+
+      - name: Keep any AMO-signed file
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: amo-signed
+          path: .output/amo/*.xpi
+          include-hidden-files: true
+          if-no-files-found: warn

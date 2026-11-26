@@ -61,6 +61,9 @@ const ICONS = {
     '<circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/>',
 } as const;
 
+// Parsing an icon string is not free; the set is tiny and fixed, so parse each kind once.
+const PARSED_ICONS = new Map<keyof typeof ICONS, Element>();
+
 function icon(kind: keyof typeof ICONS, doc: Document = document): SVGSVGElement {
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');
@@ -70,7 +73,17 @@ function icon(kind: keyof typeof ICONS, doc: Document = document): SVGSVGElement
   svg.setAttribute('focusable', 'false');
   // CSS class names are kebab-case; the icon keys are camelCase.
   svg.setAttribute('class', `twiggy-icon twiggy-icon-${kind.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`);
-  svg.innerHTML = ICONS[kind];
+  // The markup is a local constant, never user input; parse it rather than assigning innerHTML so
+  // the AMO linter does not have to guess that.
+  let parsed = PARSED_ICONS.get(kind);
+  if (parsed === undefined) {
+    parsed = new DOMParser().parseFromString(
+      `<svg xmlns="http://www.w3.org/2000/svg">${ICONS[kind]}</svg>`,
+      'image/svg+xml',
+    ).documentElement;
+    PARSED_ICONS.set(kind, parsed);
+  }
+  svg.append(...[...parsed.childNodes].map((node) => doc.importNode(node, true)));
   return svg;
 }
 
