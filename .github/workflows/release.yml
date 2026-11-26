@@ -101,7 +101,7 @@ jobs:
             --upload-source-code ".output/twiggy-${version}-sources.zip"
 
       - name: Keep any AMO-signed file
-        if: ${{ always() }}
+        if: ${{ always() && inputs.dry_run != true && inputs.firefox != false && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: amo-signed
