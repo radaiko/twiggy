@@ -1,12 +1,21 @@
 // Wiring: the session reducer joined to GitHub's page, the collector, the scroll ports and the UI.
 // Nothing here reads a credential, calls fetch or navigates away; collection only activates
 // GitHub's own Next control inside this tab (REQ-BC-1, REQ-BC-2).
+import './styles.css';
 import { buildTree } from '../lib/branch-tree';
 import { createCollector } from '../lib/collector';
 import type { CollectedRow, Collector } from '../lib/collector';
+import { COPY } from '../lib/copy';
 import { availability, perform } from '../lib/native-actions';
 import type { Entry, Result } from '../lib/native-actions';
-import { findNativeRow, readCompletion, readRows, readScope, recognizeLayout } from '../lib/native-reader';
+import {
+  findNativeRow,
+  readCompletion,
+  readPage,
+  readRows,
+  readScope,
+  recognizeLayout,
+} from '../lib/native-reader';
 import type { CompletionContext } from '../lib/native-reader';
 import { isBranchesPath } from '../lib/route';
 import { createScrollPorts } from '../lib/scroll-port';
@@ -23,6 +32,8 @@ export type MountRuntime = {
   navigate?: (href: string) => void;
   // The address Twiggy judges and reads the scope from; the page's own location by default.
   location?: () => { pathname: string; search: string };
+  // Tests shorten the 8 s production wait; the collector still retries the same way.
+  stepTimeoutMs?: number;
 };
 
 export type Mounted = {
@@ -35,6 +46,9 @@ export type Mounted = {
 
 // How long a replacement of GitHub's results node is given to settle before the page is re-read.
 const SETTLE_MS = 50;
+// GitHub's Turbo frame can finish after document_idle; look for the results region for about
+// five seconds (100 × 50 ms) instead of leaving the page unmounted until the next navigation.
+const LAYOUT_ATTEMPTS = 100;
 
 // REQ-TR-11, REQ-TA-6: only a stable tree hides the native results from sight and from assistive
 // technology. Every other state leaves the native region exactly as GitHub drew it.
@@ -74,9 +88,21 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
   let collected = false;
   // One re-read per replacement of GitHub's results node, never a chain of them.
   let settling = false;
+  // Short re-reads that found GitHub mid-render (no results region, or its header still generic).
+  let settleMisses = 0;
+  // GitHub can replace its content area without a navigation event Twiggy can rely on. When the
+  // UI this mount inserted is detached, read the page again and put it back.
+  let pageObserver: MutationObserver | null = null;
+  // The address this collection started from, so returning to GitHub's list can go back to it.
+  let start: { href: string; search: string; advanced: boolean } | null = null;
+  // The page GitHub's pager actually put on screen; the address may already be restored to page 1.
+  let nativePage = 1;
+  // A small search scope is expanded once; later Collapse all is the user's choice.
+  const defaulted = new Set<string>();
 
   const where = () => runtime.location?.() ?? { pathname: win.location.pathname, search: win.location.search ?? '' };
   const later = (handler: () => void, ms: number) => globalThis.setTimeout(handler, ms);
+  const laterPage = () => readPage(where()) > 1;
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void): void => {
     target.addEventListener(type, handler);
@@ -101,15 +127,36 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     return { region: found.region, anchor: found.toolbarAnchor };
   }
 
-  // REQ-BC-4: only a paged view past its first page can prove an end (research A4). The pager
-  // disappears on the real last page, so "paged" is remembered from any page that showed one —
-  // reading it from the current page would make the last page look like a view that never paged.
+  // REQ-BC-4: a pager on a page proves the view pages; the first-page distinction comes from the
+  // page the collector has reached, not the address, which may be restored before a resume.
+  // Page 1 with no enabled Next is the whole scope (REQ-BC-12).
   let sawPager = false;
   function completionContext(): CompletionContext {
     // The pager sits beside the results region, not inside it.
     if (doc.querySelector('nav[aria-label="Pagination"]') !== null) sawPager = true;
-    const pageNumber = Number(new URLSearchParams(where().search).get('page') ?? '1');
-    return { pagedView: sawPager, firstPage: !(pageNumber > 1) };
+    return { pagedView: sawPager, firstPage: nativePage === 1 };
+  }
+
+  // REQ-BC-15: the address is restored after the tree replaces the list, and again when the user
+  // asks for GitHub's list after the native pager moved on.
+  function restoreAddress(): void {
+    if (start === null || !start.advanced) return;
+    const history = win.history;
+    history?.replaceState?.(history.state ?? null, '', start.href);
+  }
+
+  function showNativeList(): void {
+    state = reduce(state, { type: 'switch', on: false });
+    stopCollector();
+    const advanced = start?.advanced === true;
+    const href = start?.href;
+    start = null;
+    render();
+    if (advanced && href !== undefined) {
+      const location = win.location;
+      if (typeof location.replace === 'function') location.replace(href);
+      else location.href = href;
+    }
   }
 
   function startCollector(): void {
@@ -117,9 +164,14 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     collector = null;
     collected = true;
     sawPager = false;
+    nativePage = readPage(where());
     if (state.route !== 'branches' || !state.switchOn || state.layout !== 'ok') return;
+    // REQ-BC-14: a tail can never prove the whole scope. The toolbar explains the disabled switch.
+    if (laterPage() || state.scope?.view === VIEW_LABELS.overview) return;
     const current = page();
     if (current === null || ports === null || state.scope === null) return;
+    const address = where();
+    start = { href: `${address.pathname}${address.search}`, search: address.search, advanced: false };
     // The anchor belongs to this collection: captured when it starts, restored when it ends.
     anchor = ports.captureAnchor();
     const mine = createCollector({
@@ -131,9 +183,10 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
       // REQ-BC-2: the collector turns an exhausted pager into the end proof itself; the port only
       // ever activates GitHub's own Next control, inside this tab.
       step: async () => {
-        const ok = ports === null ? false : await ports.step({ region: page()?.region ?? current.region });
+        const ok = ports === null ? false : await ports.step({ region: page()?.region ?? current.region, timeout: runtime.stepTimeoutMs });
         return ok;
       },
+      hasNext: () => Boolean(ports?.hasNext()),
       isManualScroll: () => Boolean(ports?.isManualScroll()),
       wait: (ms) => new Promise<void>((resolve) => later(resolve, ms)),
     });
@@ -142,10 +195,28 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
       // A stopped or replaced collector never speaks for the page again.
       if (disposed || collector !== mine) return;
       state = reduce(state, { type: 'collector', collector: outcome });
+      nativePage = Math.max(nativePage, readPage(where()));
+      if (start !== null && where().search !== start.search) start.advanced = true;
+      // REQ-TR-13: a small committed search starts expanded so its matches are visible.
+      if (
+        outcome.status === 'complete' &&
+        state.scope !== null &&
+        state.scope.query !== '' &&
+        state.rows.length > 0 &&
+        state.rows.length <= 20 &&
+        !defaulted.has(state.scope.key)
+      ) {
+        defaulted.add(state.scope.key);
+        for (const section of sections(state.rows)) {
+          expandAll(expansion, state.scope.key, buildTree(section.rows.map((row) => row.name)));
+        }
+      }
       // REQ-BC-10: the anchor returns once collection finishes or is stopped, never on a manual scroll.
       if (outcome.status === 'complete' || outcome.status === 'partial') {
         if (anchor !== null) ports?.restoreAnchor(anchor);
         anchor = null;
+        // A budget stop resumes from the page on screen, so its address must stay put (REQ-BC-16).
+        if (outcome.status === 'complete' || outcome.reason !== 'page-budget') restoreAddress();
       }
       render();
     });
@@ -219,14 +290,28 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
 
   function drawToolbar(): void {
     if (toolbar !== null && !toolbar.isConnected) toolbar = null;
+    // REQ-TB-8 blocks a fresh later-page list, but a tree already collected from page 1 must always
+    // be switchable off, even if restoring the address failed.
+    const blocked = state.rows.length === 0 && laterPage();
     const element = scoped(renderToolbar(
-      { state: view, rows: state.rows, outcome: state.outcome, scope: state.scope, switchOn: state.switchOn },
+      {
+        state: view,
+        rows: state.rows,
+        outcome: state.outcome,
+        scope: state.scope,
+        switchOn: state.switchOn,
+        switchDisabled: blocked,
+        switchHint: blocked ? COPY.pageOneSwitchDescription : undefined,
+      },
       {
         onSwitch: (on) => {
           // REQ-BC-8: turning the switch off cancels immediately and returns the native list.
-          state = reduce(state, { type: 'switch', on });
+          // REQ-BC-14: a later page cannot be treed.
+          if (!on) return showNativeList();
+          if (blocked) return;
+          state = reduce(state, { type: 'switch', on: true });
           stopCollector();
-          if (on) startCollector();
+          startCollector();
           render();
         },
         onExpandAll: () => {
@@ -234,10 +319,13 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
           for (const section of sections(state.rows)) {
             expandAll(expansion, state.scope.key, buildTree(section.rows.map((row) => row.name)));
           }
+          // REQ-TB-4: expansion memory changed, so the tree must be drawn again.
+          drawn = '';
           render();
         },
         onCollapseAll: () => {
           if (state.scope !== null) collapseAll(expansion, state.scope.key);
+          drawn = '';
           render();
         },
       },
@@ -262,10 +350,13 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
       anchor = ports?.captureAnchor() ?? null;
       void collector.resume();
     },
+    onLoadMore: () => {
+      if (collector === null) return startCollector();
+      anchor = ports?.captureAnchor() ?? null;
+      void collector.resume();
+    },
     onShowList: () => {
-      state = reduce(state, { type: 'switch', on: false });
-      stopCollector();
-      render();
+      showNativeList();
     },
   });
 
@@ -401,15 +492,38 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
     region = found.ok ? found.region : null;
     toolbarAnchor = found.ok ? found.toolbarAnchor : null;
     state = reduce(state, { type: 'layout', ok: found.ok });
-    if (!branches || !found.ok) {
+    if (!branches) {
       stopCollector();
       ports?.dispose();
       ports = null;
-      return found.ok ? render() : removeUi();
+      return render();
+    }
+    if (!found.ok) {
+      stopCollector();
+      ports?.dispose();
+      ports = null;
+      removeUi();
+      // REQ-BC-8: the results region can arrive after document_idle while GitHub's Turbo frame
+      // finishes. Look again for a few seconds; the next navigation rechecks anyway.
+      if (settleMisses < LAYOUT_ATTEMPTS) {
+        settleMisses += 1;
+        later(() => recheck(), SETTLE_MS);
+      }
+      return;
     }
     ports?.dispose();
-    ports = createScrollPorts(doc, win, found.region);
+    ports = null;
     const scope = readScope(doc, { pathname, search });
+    // REQ-TS-5: the overview is a preview with sections and "View more branches"; treeing it
+    // would present a section as a complete scope or as a partial collection. Leave it native.
+    if (scope.view === 'overview') {
+      stopCollector();
+      view = 'off';
+      removeUi();
+      return;
+    }
+    settleMisses = 0;
+    ports = createScrollPorts(doc, win, found.region);
     // REQ-BC-8: a scope change cancels the old collection and discards its rows.
     const fresh = state.scope?.key !== scope.key;
     if (fresh) {
@@ -431,11 +545,25 @@ export function mount(doc: Document, win: Window, runtime: MountRuntime = {}): M
   // A native search submission replaces the results; its query decides the new scope.
   listen(doc, 'submit', () => later(() => recheck(), 0));
 
+  if (typeof MutationObserver !== 'undefined') {
+    pageObserver = new MutationObserver(() => {
+      if (disposed) return;
+      const toolbarGone = toolbar !== null && !toolbar.isConnected;
+      const treeGone = tree !== null && !tree.isConnected;
+      if (!toolbarGone && !treeGone) return;
+      removeUi();
+      recheck();
+    });
+    pageObserver.observe(doc.documentElement, { childList: true, subtree: true });
+  }
+
   recheck();
 
   return {
     dispose: () => {
       disposed = true;
+      pageObserver?.disconnect();
+      pageObserver = null;
       stopCollector();
       ports?.dispose();
       ports = null;

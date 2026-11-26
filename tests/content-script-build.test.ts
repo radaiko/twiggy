@@ -12,6 +12,21 @@ describe.each(builds)('%s content script', (build) => {
     expect(script.length).toBeGreaterThan(0);
     expect(script).not.toContain('github.com');
   });
+
+  // @req REQ-EB-5
+  it('ships the stylesheet the manifest points at', async () => {
+    const manifest = JSON.parse(await readBuildOutput(build, 'manifest.json')) as {
+      content_scripts?: { css?: string[] }[];
+    };
+    const cssFiles = manifest.content_scripts?.[0]?.css ?? [];
+    expect(cssFiles.length).toBeGreaterThan(0);
+    for (const file of cssFiles) {
+      const css = await readBuildOutput(build, file);
+      expect(css.length).toBeGreaterThan(0);
+      expect(css).toContain('.twiggy-toolbar');
+      expect(css).toContain('.twiggy-tree');
+    }
+  });
 });
 
 // @req REQ-PA-4

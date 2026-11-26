@@ -301,6 +301,23 @@ describe("step focus and repeated advance", () => {
   });
 });
 
+describe("hasNext", () => {
+  // @req REQ-BC-13
+  it("is true only while an enabled Next control exists", () => {
+    const first = setup("vscode-all-first.html");
+    cleanups.push(() => first.ports.dispose());
+    expect(first.ports.hasNext()).toBe(true);
+
+    const end = setup("vscode-all-end.html");
+    cleanups.push(() => end.ports.dispose());
+    expect(end.ports.hasNext()).toBe(false);
+
+    const search = setup("vscode-search.html");
+    cleanups.push(() => search.ports.dispose());
+    expect(search.ports.hasNext()).toBe(false);
+  });
+});
+
 describe("dispose", () => {
   // @req REQ-BC-7
   it("removes every listener", () => {

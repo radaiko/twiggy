@@ -12,6 +12,7 @@ describe('copy strings', () => {
     expect(COPY.unsupportedSwitchDescription).toBe(
       'Reload after GitHub finishes loading, or use the native list.',
     );
+    expect(COPY.pageOneSwitchDescription).toBe('Open the first page of this list to use tree view.');
   });
 
   // @req REQ-TB-3
@@ -27,22 +28,27 @@ describe('copy strings', () => {
       "Twiggy pages through GitHub's list to load this view. You can stop at any time.",
     );
     expect(COPY.branchesCollected(528)).toBe('528 branches collected');
+    expect(COPY.branchesCollected(1)).toBe('1 branch collected');
     expect(COPY.stopCollecting).toBe('Stop collecting');
   });
 
   // @req REQ-TB-7
   it('carries the completion announcement', () => {
     expect(COPY.collectionComplete(528)).toBe('Collection complete. 528 branches in this view.');
+    expect(COPY.collectionComplete(1)).toBe('Collection complete. 1 branch in this view.');
   });
 
   // @req REQ-BC-6
   it('carries the partial strip title and each reason', () => {
     expect(COPY.partialTitle(12)).toBe('Partial tree — 12 branches collected');
+    expect(COPY.partialTitle(1)).toBe('Partial tree — 1 branch collected');
     expect(COPY.partialReasons).toEqual({
       'manual-scroll': 'Collection stopped when you scrolled. More branches may be missing.',
       'stop-button': 'You stopped collection. More branches may be missing.',
       stalled: 'GitHub did not load more branches. Twiggy could not confirm this view is complete.',
+      'page-budget': 'Twiggy stopped to keep GitHub responsive. Load more branches to continue.',
     });
+    expect(COPY.loadMore).toBe('Load more branches');
   });
 
   // @req REQ-BC-6
@@ -89,6 +95,7 @@ describe('copy strings', () => {
     expect(COPY.treeLabel).toBe('Branches grouped by folder');
     expect(COPY.openBranch('feature/login/oauth')).toBe('Open branch feature/login/oauth');
     expect(COPY.atLeastCollected(12)).toBe('At least 12 collected branches');
+    expect(COPY.atLeastCollected(1)).toBe('At least 1 collected branch');
   });
 
   // @req REQ-TB-3

@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { ID_PREFIX, SCRIPT_FILE, reconcile } from '../src/lib/host-registry';
+import { ID_PREFIX, SCRIPT_FILE, STYLE_FILE, reconcile } from '../src/lib/host-registry';
 
 interface FakeScript {
   id: string;
   matches: string[];
   js: string[];
+  css: string[];
   runAt: 'document_idle';
   persistAcrossSessions: true;
 }
@@ -50,6 +51,7 @@ function registration(pattern: string): FakeScript {
     id: `${ID_PREFIX}${pattern}`,
     matches: [pattern],
     js: [SCRIPT_FILE],
+    css: [STYLE_FILE],
     runAt: 'document_idle',
     persistAcrossSessions: true,
   };
@@ -70,6 +72,7 @@ describe('reconcile', () => {
     expect(count(calls, 'unregister')).toBe(0);
     expect(scripts).toEqual([registration(A)]);
     expect(scripts[0]?.js).toEqual(['content-scripts/branches.js']);
+    expect(scripts[0]?.css).toEqual(['content-scripts/branches.css']);
   });
 
   // @req REQ-HA-3
@@ -78,6 +81,7 @@ describe('reconcile', () => {
       id: 'other:x',
       matches: [A],
       js: ['other.js'],
+      css: [],
       runAt: 'document_idle',
       persistAcrossSessions: true,
     };

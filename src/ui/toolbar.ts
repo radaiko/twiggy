@@ -9,6 +9,10 @@ export type ToolbarState = {
   outcome: { status: 'idle' | 'collecting' | 'complete' | 'partial' } | null;
   scope: Scope | null;
   switchOn: boolean;
+  /** REQ-TB-8: a later page cannot be treed; the switch is off and disabled. */
+  switchDisabled?: boolean;
+  /** The visible reason the switch is disabled, when it has one. */
+  switchHint?: string;
 };
 
 export type ToolbarHandlers = {
@@ -43,6 +47,7 @@ export function renderToolbar(input: ToolbarState, handlers: ToolbarHandlers): H
   const doc = globalThis.document;
   const { state, rows, scope } = input;
   const unsupported = state === 'unsupported';
+  const disabled = unsupported || input.switchDisabled === true;
 
   const toolbar = doc.createElement('div');
   toolbar.setAttribute('role', 'toolbar');
@@ -58,11 +63,11 @@ export function renderToolbar(input: ToolbarState, handlers: ToolbarHandlers): H
   toggle.setAttribute('aria-checked', String(input.switchOn));
   toggle.setAttribute('aria-describedby', 'twiggy-switch-description');
   toggle.checked = input.switchOn;
-  if (unsupported) toggle.setAttribute('aria-disabled', 'true');
+  if (disabled) toggle.setAttribute('aria-disabled', 'true');
   toggle.addEventListener('click', (event) => {
     // The mount re-renders from the state it reduces; the checkbox never flips on its own.
     event.preventDefault();
-    if (unsupported) return;
+    if (disabled) return;
     handlers.onSwitch(!input.switchOn);
   });
   const name = doc.createElement('span');
@@ -73,6 +78,14 @@ export function renderToolbar(input: ToolbarState, handlers: ToolbarHandlers): H
   description.textContent = unsupported ? COPY.unsupportedSwitchDescription : COPY.switchDescription;
   label.append(toggle, name, description);
   toolbar.append(label);
+
+  // REQ-TB-8: a disabled switch needs a reason a sighted user can read, not only a hidden one.
+  if (input.switchHint !== undefined) {
+    const hint = doc.createElement('span');
+    hint.className = 'twiggy-switch-hint';
+    hint.textContent = input.switchHint;
+    toolbar.append(hint);
+  }
 
   // REQ-TB-7: the one polite live region; the scope text below is never live.
   const live = doc.createElement('div');

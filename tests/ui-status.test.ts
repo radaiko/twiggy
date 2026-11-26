@@ -49,7 +49,7 @@ describe('collecting strip', () => {
 });
 
 describe('partial strip', () => {
-  const reasons = ['manual-scroll', 'stop-button', 'stalled'] as const;
+  const reasons = ['manual-scroll', 'stop-button', 'stalled', 'page-budget'] as const;
 
   // @req REQ-BC-5
   it('is persistent with no dismiss control, titled with the collected count', () => {
@@ -86,12 +86,21 @@ describe('partial strip', () => {
   });
 
   // @req REQ-BC-9
-  it('offers the retry action for every partial reason', () => {
+  // @req REQ-BC-16
+  it('offers the retry or load-more action for every partial reason', () => {
     for (const reason of reasons) {
       const strip = renderPartial(reason, 12);
-      expect(buttons(strip)).toContain(COPY.tryCollectingAgain);
+      expect(buttons(strip)).toContain(reason === 'page-budget' ? COPY.loadMore : COPY.tryCollectingAgain);
       expect(buttons(strip)).toContain(COPY.showGitHubList);
     }
+  });
+
+  // @req REQ-BC-16
+  it('calls the load-more handler for a budget stop', () => {
+    let more = 0;
+    const strip = renderPartial('page-budget', 200, { onLoadMore: () => more++ });
+    [...strip.querySelectorAll('button')].forEach((button) => button.click());
+    expect(more).toBe(1);
   });
 
   // @req REQ-BC-9

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readCompletion } from "../src/lib/native-reader";
+import { readCompletion, readPage } from "../src/lib/native-reader";
 
 const fixtures = join(__dirname, "fixtures", "github");
 
@@ -14,16 +14,51 @@ function load(name: string): Document {
   return new DOMParser().parseFromString(source(name), "text/html");
 }
 
-// A paged collection view: the page address names a page of /all or /active.
+// A paged collection view past its first page: the page address names page 2 or later.
 const PAGED = { pagedView: true, firstPage: false };
-// A view that renders no pager and is not paginated (overview, search).
-const UNPAGED = { pagedView: false, firstPage: false };
-// The first page of a paged view: A4's inferred zero-result page 1 of /all also has no pager.
-const FIRST_LEAF = { pagedView: true, firstPage: true };
+// The first page of any recognised scope.
+const FIRST = { pagedView: false, firstPage: true };
+
+describe("readPage", () => {
+  it("reads GitHub's page parameter and falls back to 1", () => {
+    expect(readPage({ pathname: "/o/r/branches/all" })).toBe(1);
+    expect(readPage({ pathname: "/o/r/branches/all", search: "?page=7" })).toBe(7);
+    expect(readPage({ pathname: "/o/r/branches/all", search: "?page=0" })).toBe(1);
+    expect(readPage({ pathname: "/o/r/branches/all", search: "?page=nope" })).toBe(1);
+  });
+});
 
 describe("readCompletion", () => {
+  // @req REQ-BC-12
+  it("completes a page-one search with the single-page proof", () => {
+    expect(readCompletion(load("vscode-search.html"), 1, FIRST)).toEqual({
+      kind: "single-page",
+    });
+  });
+
+  // @req REQ-BC-12
+  it("completes a page-one overview with the single-page proof", () => {
+    expect(readCompletion(load("vscode-overview.html"), 6, FIRST)).toEqual({
+      kind: "single-page",
+    });
+  });
+
+  // @req REQ-BC-12
+  it("completes page one when GitHub renders no pager for a 20-row list", () => {
+    const doc = load("vscode-all-first.html");
+    doc.querySelector('nav[aria-label="Pagination"]')?.remove();
+    expect(readCompletion(doc, 20, FIRST)).toEqual({ kind: "single-page" });
+  });
+
+  // @req REQ-BC-12
+  it("completes page one when the only Next is disabled", () => {
+    expect(readCompletion(load("vscode-all-end.html"), 20, FIRST)).toEqual({
+      kind: "single-page",
+    });
+  });
+
   // @req REQ-BC-4
-  it("reads the disabled Next anchor of vscode-all-end.html as the end signal", () => {
+  it("reads the disabled Next anchor past page one as the end signal", () => {
     expect(readCompletion(load("vscode-all-end.html"), 20, PAGED)).toEqual({
       kind: "end-signal",
     });
@@ -31,56 +66,33 @@ describe("readCompletion", () => {
 
   // @req REQ-BC-4
   it("reads an enabled Next anchor as unknown", () => {
-    expect(readCompletion(load("vscode-all-first.html"), 20, PAGED)).toEqual({
+    expect(readCompletion(load("vscode-all-first.html"), 20, { pagedView: true, firstPage: true })).toEqual({
+      kind: "unknown",
+    });
+    expect(readCompletion(load("vscode-active.html"), 20, PAGED)).toEqual({
       kind: "unknown",
     });
   });
 
   // @req REQ-BC-4
   it("reads the native blankslate with zero rows as confirmed empty", () => {
-    expect(
-      readCompletion(load("vscode-search-empty.html"), 0, UNPAGED),
-    ).toEqual({
+    expect(readCompletion(load("vscode-search-empty.html"), 0, FIRST)).toEqual({
       kind: "confirmed-empty",
     });
   });
 
   // @req REQ-BC-4
   it("never calls an empty state confirmed while rows were collected", () => {
-    expect(
-      readCompletion(load("vscode-search-empty.html"), 20, UNPAGED),
-    ).toEqual({
-      kind: "unknown",
-    });
+    expect(readCompletion(load("vscode-search-empty.html"), 20, FIRST).kind).not.toBe(
+      "confirmed-empty",
+    );
   });
 
-  // @req REQ-BC-4
-  it("does not treat a pager-free overview page as an end", () => {
-    expect(readCompletion(load("vscode-overview.html"), 6, UNPAGED)).toEqual({
-      kind: "unknown",
-    });
-  });
-
-  // @req REQ-BC-4
-  it("does not treat a pager-free search result as an end", () => {
-    expect(readCompletion(load("vscode-search.html"), 1, UNPAGED)).toEqual({
-      kind: "unknown",
-    });
-  });
-
-  // @req REQ-BC-4
-  it("does not treat an absent pager alone as an end", () => {
+  // @req REQ-BC-12
+  it("never proves an empty page one complete without the blankslate", () => {
     const doc = load("vscode-all-first.html");
     doc.querySelector('nav[aria-label="Pagination"]')?.remove();
-    expect(readCompletion(doc, 20, UNPAGED)).toEqual({ kind: "unknown" });
-    expect(readCompletion(doc, 20, FIRST_LEAF)).toEqual({ kind: "unknown" });
-  });
-
-  // @req REQ-BC-4
-  it("does not treat an absent pager alone as confirmed empty", () => {
-    const doc = load("vscode-all-first.html");
-    doc.querySelector('nav[aria-label="Pagination"]')?.remove();
-    expect(readCompletion(doc, 0, FIRST_LEAF)).toEqual({ kind: "unknown" });
+    expect(readCompletion(doc, 0, FIRST)).toEqual({ kind: "unknown" });
   });
 
   // @req REQ-BC-4
@@ -91,20 +103,16 @@ describe("readCompletion", () => {
   });
 
   // @req REQ-BC-4
-  it("never proves the end on the first page, where the inferred zero-result page 1 has no pager", () => {
+  it("does not prove an end on a later page of a view that never paged", () => {
     const doc = load("vscode-all-first.html");
     doc.querySelector('nav[aria-label="Pagination"]')?.remove();
-    expect(readCompletion(doc, 0, FIRST_LEAF)).toEqual({ kind: "unknown" });
-    expect(readCompletion(load("vscode-all-end.html"), 20, FIRST_LEAF)).toEqual(
-      { kind: "unknown" },
-    );
+    expect(readCompletion(doc, 20, { pagedView: false, firstPage: false })).toEqual({
+      kind: "unknown",
+    });
   });
 
   // @req REQ-BC-4
-  it("returns unknown for an absent spinner or an unchanged row count", () => {
-    expect(readCompletion(load("vscode-active.html"), 20, PAGED)).toEqual({
-      kind: "unknown",
-    });
+  it("ignores an absent spinner or an unchanged row count", () => {
     expect(readCompletion(load("vscode-all-end.html"), 0, PAGED)).toEqual({
       kind: "end-signal",
     });

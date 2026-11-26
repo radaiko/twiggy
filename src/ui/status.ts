@@ -40,14 +40,17 @@ export function renderCollecting(n: number, { onStop }: { onStop?: () => void } 
 export function renderPartial(
   reason: PartialReason,
   n: number,
-  { onRetry, onShowList }: { onRetry?: () => void; onShowList?: () => void } = {},
+  { onRetry, onShowList, onLoadMore }: { onRetry?: () => void; onShowList?: () => void; onLoadMore?: () => void } = {},
 ): HTMLElement {
   const strip = element('div', 'twiggy-status twiggy-partial');
   strip.dataset.reason = reason;
   const title = element('p', 'twiggy-status-title', COPY.partialTitle(n));
   const detail = element('p', 'twiggy-status-detail', COPY.partialReasons[reason]);
   const actions = element('div', 'twiggy-status-actions');
-  actions.append(button(COPY.tryCollectingAgain, onRetry), button(COPY.showGitHubList, onShowList));
+  // REQ-BC-16: a budget stop is progress, not a failure; the user loads the next slice.
+  const first =
+    reason === 'page-budget' ? button(COPY.loadMore, onLoadMore) : button(COPY.tryCollectingAgain, onRetry);
+  actions.append(first, button(COPY.showGitHubList, onShowList));
   strip.append(title, detail, actions);
   return strip;
 }

@@ -14,6 +14,7 @@ export default defineConfig({
         {
           matches: ['https://github.com/*'],
           js: ['content-scripts/branches.js'],
+          css: ['content-scripts/branches.css'],
           run_at: 'document_idle',
         },
       ];

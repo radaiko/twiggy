@@ -121,6 +121,13 @@ describe('flatten', () => {
     expect(row(items, 'feature').countDescription).toBe('At least 12 collected branches');
   });
 
+  // @req REQ-TR-6
+  it('reads "At least 1 collected branch" for one branch', () => {
+    const items = flatten(buildTree(['feature/x']), new Set(), { incomplete: true });
+    expect(row(items, 'feature').countText).toBe('≥1');
+    expect(row(items, 'feature').countDescription).toBe('At least 1 collected branch');
+  });
+
   // @req REQ-TR-4
   it('renders a node that is branch and folder as one item', () => {
     const tree = buildTree(['feature', 'feature/x']);

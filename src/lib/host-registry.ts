@@ -2,11 +2,13 @@ import { normalizeHost } from './hosts';
 
 export const ID_PREFIX = 'twiggy:';
 export const SCRIPT_FILE = 'content-scripts/branches.js';
+export const STYLE_FILE = 'content-scripts/branches.css';
 
 interface Script {
   id: string;
   matches: string[];
   js: string[];
+  css: string[];
   runAt: 'document_idle';
   persistAcrossSessions: true;
 }
@@ -54,6 +56,7 @@ export async function reconcile(api: RegistryApi): Promise<void> {
           id,
           matches: [id.slice(ID_PREFIX.length)],
           js: [SCRIPT_FILE],
+          css: [STYLE_FILE],
           runAt: 'document_idle' as const,
           persistAcrossSessions: true as const,
         })),
