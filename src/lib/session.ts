@@ -34,15 +34,15 @@ export type SessionEvent =
   | { type: 'handoff' }
   | { type: 'mutated' };
 
-// A new session starts fresh: the off preference is never carried across a page load (REQ-TB-5).
+// A new session starts fresh and off: tree mode is opt-in (REQ-TB-2).
 export function initialState(): SessionState {
-  return { route: 'branches', layout: 'unknown', switchOn: true, scope: null, handoff: false, rows: [], outcome: null };
+  return { route: 'branches', layout: 'unknown', switchOn: false, scope: null, handoff: false, rows: [], outcome: null };
 }
 
 export const IDLE: SessionState = {
   route: 'other',
   layout: 'unknown',
-  switchOn: true,
+  switchOn: false,
   scope: null,
   handoff: false,
   rows: [],
@@ -89,6 +89,7 @@ export function reduce(state: SessionState, event: SessionEvent): SessionState {
 function proved(outcome: CollectorState | null): Proof | null {
   if (!outcome || outcome.status !== 'complete') return null;
   if (outcome.proof === 'confirmed-empty') return outcome.rows.length === 0 ? 'confirmed-empty' : null;
+  if (outcome.proof === 'single-page') return outcome.rows.length > 0 ? 'single-page' : null;
   return outcome.proof === 'end-signal' || outcome.proof === 'total-match' ? outcome.proof : null;
 }
 

@@ -1,7 +1,7 @@
 // Every user-visible string of docs/design/tree-view.md, verbatim.
 // No string contains the word "all" except the native view name "All".
 
-export type PartialReason = 'manual-scroll' | 'stop-button' | 'stalled';
+export type PartialReason = 'manual-scroll' | 'stop-button' | 'stalled' | 'page-budget';
 
 export const COPY = {
   // GitHub's own badge labels, shown on a branch row (REQ-TR-3).
@@ -10,21 +10,24 @@ export const COPY = {
   switchLabel: 'Tree view',
   switchDescription: "Group branch names into folders. Turn off to use GitHub's list.",
   unsupportedSwitchDescription: 'Reload after GitHub finishes loading, or use the native list.',
+  pageOneSwitchDescription: 'Open the first page of this list to use tree view.',
   expandAll: 'Expand all',
   collapseAll: 'Collapse all',
   collectingTitle: 'Collecting branches…',
   collectingDetail:
     "Twiggy pages through GitHub's list to load this view. You can stop at any time.",
-  branchesCollected: (n: number) => `${n} branches collected`,
+  branchesCollected: (n: number) => `${n === 1 ? '1 branch' : `${n} branches`} collected`,
   stopCollecting: 'Stop collecting',
-  collectionComplete: (n: number) => `Collection complete. ${n} branches in this view.`,
-  partialTitle: (n: number) => `Partial tree — ${n} branches collected`,
+  collectionComplete: (n: number) => `Collection complete. ${n === 1 ? '1 branch' : `${n} branches`} in this view.`,
+  partialTitle: (n: number) => `Partial tree — ${n === 1 ? '1 branch' : `${n} branches`} collected`,
   partialReasons: {
     'manual-scroll': 'Collection stopped when you scrolled. More branches may be missing.',
     'stop-button': 'You stopped collection. More branches may be missing.',
     stalled: 'GitHub did not load more branches. Twiggy could not confirm this view is complete.',
+    'page-budget': 'Twiggy stopped to keep GitHub responsive. Load more branches to continue.',
   },
   tryCollectingAgain: 'Try collecting again',
+  loadMore: 'Load more branches',
   showGitHubList: 'Show GitHub list',
   showBranchInGitHubList: 'Show branch in GitHub list',
   emptyViewHeading: 'No branches in this view',
@@ -42,7 +45,7 @@ export const COPY = {
     `GitHub's row for ${fullBranchName} is no longer available. Reload the branches page.`,
   treeLabel: 'Branches grouped by folder',
   openBranch: (fullPath: string) => `Open branch ${fullPath}`,
-  atLeastCollected: (n: number) => `At least ${n} collected branches`,
+  atLeastCollected: (n: number) => `At least ${n} collected ${n === 1 ? 'branch' : 'branches'}`,
 } as const;
 
 export function scopeText({

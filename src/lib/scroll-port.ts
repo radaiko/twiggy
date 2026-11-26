@@ -2,8 +2,9 @@
 const NEXT_PAGE = 'a[data-component="Pagination.NextPage"][rel="next"]';
 const BRANCHES_REGION = 'section[aria-label="Branches"][data-hpc]';
 const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'Home', 'End', ' ']);
-// A10: activating Next showed the new rows after 0.68 s and 1.9 s; a press never failed a 25 s wait.
-const STEP_TIMEOUT_MS = 1200;
+// A10: activating Next showed the new rows after 0.68 s and 1.9 s; a press never failed a 25 s
+// wait. 8 s leaves room for a slow page without treating it as the end (REQ-BC-13).
+const STEP_TIMEOUT_MS = 8000;
 const POLL_INTERVAL_MS = 50;
 
 type ElementSnapshot = { links: Element[]; ids: string[] };
@@ -114,6 +115,12 @@ export function createScrollPorts(doc: Document, win: Window, region: Element) {
     return arrived;
   };
 
+  // REQ-BC-13: a missing or disabled Next is the end; only an enabled one is worth retrying.
+  const hasNext = (): boolean => {
+    const link = doc.querySelector(NEXT_PAGE);
+    return link !== null && !disabled(link);
+  };
+
   const dispose = () => {
     doc.removeEventListener('wheel', setManual, true);
     doc.removeEventListener('touchstart', setManual, true);
@@ -124,6 +131,7 @@ export function createScrollPorts(doc: Document, win: Window, region: Element) {
 
   return {
     step,
+    hasNext,
     isManualScroll: () => manual,
     captureAnchor: anchor,
     // A property, not `restoreAnchor: restore` shorthand: a shorthand method binds `this` to the

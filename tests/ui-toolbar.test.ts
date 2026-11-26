@@ -53,7 +53,7 @@ const scopeNode = (element: HTMLElement) =>
 
 describe('toolbar', () => {
   // @req REQ-TB-2
-  it('renders one labelled switch, checked by default, with its description as accessible description', () => {
+  it('renders one labelled switch with its description as accessible description', () => {
     const { element } = render({ state: 'collecting' });
     const switches = element!.querySelectorAll<HTMLElement>('[role="switch"]');
     expect(switches).toHaveLength(1);
@@ -217,10 +217,32 @@ describe('toolbar', () => {
   });
 
   // @req REQ-TB-5
-  it('renders the switch on again for a fresh session and nothing on a non-branches route', () => {
-    expect(initialState().switchOn).toBe(true);
+  it('renders the switch off again for a fresh session and nothing on a non-branches route', () => {
+    expect(initialState().switchOn).toBe(false);
     expect(viewOf(IDLE)).toBe('hidden');
     expect(renderToolbar({ ...IDLE, state: 'hidden', rows: folderRows }, handlers())).toBeNull();
+  });
+
+  // @req REQ-TB-8
+  it('disables the switch with a visible reason on a later page', () => {
+    const on = handlers();
+    const element = renderToolbar(
+      {
+        state: 'off',
+        rows: [],
+        outcome: null,
+        scope: { view: 'All', query: '', key: 'all|' },
+        switchOn: false,
+        switchDisabled: true,
+        switchHint: COPY.pageOneSwitchDescription,
+      },
+      on,
+    );
+    const toggle = element!.querySelector<HTMLElement>('[role="switch"]')!;
+    expect(toggle.getAttribute('aria-disabled')).toBe('true');
+    expect(element!.querySelector('.twiggy-switch-hint')?.textContent).toBe(COPY.pageOneSwitchDescription);
+    toggle.click();
+    expect(on.onSwitch).not.toHaveBeenCalled();
   });
 
   // @req REQ-TB-7

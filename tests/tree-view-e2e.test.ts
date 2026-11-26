@@ -31,7 +31,13 @@ function region(): HTMLElement {
 // runtime here. Timers stay the tab's own, as they are in a browser.
 class FakeWindow extends EventTarget {
   scrollY = 0;
-  readonly location = { href: '' };
+  readonly location = { href: '', replace: vi.fn() };
+  readonly history = {
+    state: null as unknown,
+    replaceState: vi.fn((state: unknown, _title: string, url: string) => {
+      window.history.replaceState(state, '', url);
+    }),
+  };
   readonly navigate = vi.fn();
 
   setTimeout(handler: () => void, ms: number): number {
@@ -104,7 +110,7 @@ async function advance(name: string | null, timeout = 8000): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, name === null ? 0 : 2200));
 }
 
-function setup(respondsWith: string | null): Mounted {
+function setup(respondsWith: string | null, start = true): Mounted {
   pageNumber = 1;
   window.history.replaceState({}, '', '/microsoft/vscode/branches/all');
   activate(document, location);
@@ -117,8 +123,10 @@ function setup(respondsWith: string | null): Mounted {
     navigate: (href) => win.navigate(href),
     // jsdom's window cannot be given a pathname, so the mount is told which page it joined on.
     location: () => ({ pathname: location.pathname, search: location.search }),
+    stepTimeoutMs: 200,
   });
   live.push(wired);
+  if (start) flipSwitch();
   return wired;
 }
 
@@ -213,7 +221,6 @@ describe('mounted flow', () => {
     expect(document.querySelector('.twiggy-collecting')).toBeNull();
   });
 
-  // @req REQ-TS-1
   // @req REQ-TB-5
   it('gives the native list and no tree when the switch is turned off', async () => {
     load('vscode-all-first.html');
@@ -232,5 +239,20 @@ describe('mounted flow', () => {
     // GitHub's own rows are on screen instead of the tree.
     expect(region().querySelectorAll('a[data-component="BranchName"]').length).toBeGreaterThan(0);
     expect(bodyText()).not.toContain('Collection complete');
+  });
+
+  // @req REQ-TB-2
+  it('starts off and collects only after the user turns tree view on', async () => {
+    load('vscode-all-first.html');
+    const wired = setup(null, false);
+    await settled();
+
+    expect(wired.view()).toBe('off');
+    expect(tree()).toBeNull();
+    expect(region().hasAttribute('hidden')).toBe(false);
+
+    flipSwitch();
+    await settled();
+    expect(wired.view()).toBe('collecting');
   });
 });

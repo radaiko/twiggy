@@ -34,7 +34,13 @@ function region(): HTMLElement {
 class FakeWindow extends EventTarget {
   scrollY = 0;
   readonly scrollCalls: ScrollToOptions[] = [];
-  readonly location = { href: '' };
+  readonly location = { href: '', replace: vi.fn() };
+  readonly history = {
+    state: null as unknown,
+    replaceState: vi.fn((state: unknown, _title: string, url: string) => {
+      window.history.replaceState(state, '', url);
+    }),
+  };
   readonly navigate = vi.fn();
 
   setTimeout(handler: () => void, ms: number): number {
@@ -58,6 +64,8 @@ function setup(
   // The collector starts inside mount and reaches for the Next control at once, so the answer to
   // that first click has to be in place before mount runs.
   respondsWith: string | null = null,
+  // Tree view is opt-in: most journeys turn it on as the user would after the page loads.
+  start = true,
 ): { win: FakeWindow; wired: Mounted } {
   pageNumber = 1;
   window.history.replaceState({}, '', path);
@@ -72,9 +80,12 @@ function setup(
     navigate: (href) => win.navigate(href),
     // jsdom's window cannot be given a pathname, so the mount is told which page it joined on.
     location: () => ({ pathname: location.pathname, search: location.search }),
+    // Keep the stalled journeys fast; production uses 8 s.
+    stepTimeoutMs: 200,
   });
   live.push({ wired });
   wires.push(wired);
+  if (start) flipSwitch();
   return { win, wired };
 }
 
@@ -243,6 +254,43 @@ describe('mount', () => {
     expect(tree()).toBeNull();
     expect(hiddenNow()).toBe(false);
     expect(inertNow()).toBe(false);
+  });
+
+  // GitHub's Turbo frame can finish after the content script starts; the mount must keep looking
+  // for the results region instead of leaving the page without a toolbar until a later event.
+  // @req REQ-BC-8
+  it('mounts when the results region arrives after the script starts', { timeout: 20000 }, async () => {
+    load('vscode-all-first.html');
+    const section = region();
+    const host = section.parentElement!;
+    const next = section.nextSibling;
+    section.remove();
+
+    setup('/microsoft/vscode/branches/all', null, false);
+    await settled();
+    expect(toolbar()).toBeNull();
+
+    host.insertBefore(section, next);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(toolbar()).not.toBeNull();
+    expect(document.querySelector<HTMLInputElement>('input[role="switch"]')?.checked).toBe(false);
+  });
+
+  // GitHub replaces its content area without a navigation event; the toolbar must come back.
+  // @req REQ-TB-1
+  it('puts its toolbar back when GitHub replaces the content around it', { timeout: 20000 }, async () => {
+    load('vscode-all-first.html');
+    setup('/microsoft/vscode/branches/all', null, false);
+    await settled();
+
+    const first = toolbar();
+    expect(first).not.toBeNull();
+    first!.remove();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(toolbar()).not.toBeNull();
+    expect(toolbar()).not.toBe(first);
   });
 
   // The shipped regression: nothing carried the class the whole stylesheet hangs its tokens on,
@@ -480,7 +528,7 @@ describe('mount', () => {
     const active = focusSearch();
     const before = bytes();
 
-    const { wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html');
+    const { wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html', false);
     await settled();
 
     expect(wired.view()).toBe('unsupported');
@@ -489,5 +537,98 @@ describe('mount', () => {
     expect(document.activeElement).toBe(active);
     wired.dispose();
     expect(bytes()).toBe(before);
+  });
+
+  // @req REQ-TB-2
+  it('starts off and leaves the native list untouched until the user opts in', async () => {
+    load('vscode-all-first.html');
+    const { wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html', false);
+    await settled();
+
+    expect(wired.view()).toBe('off');
+    expect(tree()).toBeNull();
+    expect(hiddenNow()).toBe(false);
+    expect(region().querySelectorAll('a[data-component="BranchName"]').length).toBeGreaterThan(0);
+    expect(document.querySelector<HTMLInputElement>('[role="switch"]')?.checked).toBe(false);
+
+    flipSwitch();
+    await settled();
+    expect(wired.view()).toBe('collecting');
+  });
+
+  // @req REQ-TB-8
+  it('disables the switch with a visible reason on a later page', async () => {
+    load('vscode-all-first.html');
+    const { wired } = setup('/microsoft/vscode/branches/all?page=2', 'vscode-active.html', true);
+    await settled();
+
+    expect(wired.view()).toBe('off');
+    expect(tree()).toBeNull();
+    expect(document.querySelector('[role="switch"]')?.getAttribute('aria-disabled')).toBe('true');
+    expect(document.querySelector('.twiggy-switch-hint')?.textContent).toBe(COPY.pageOneSwitchDescription);
+  });
+
+  // @req REQ-TS-5
+  it('leaves the overview native', async () => {
+    load('vscode-overview.html');
+    const before = bytes();
+    const { wired } = setup('/microsoft/vscode/branches', null, false);
+    await settled();
+
+    expect(wired.view()).toBe('off');
+    expect(twiggy()).toEqual([]);
+    expect(bytes()).toBe(before);
+  });
+
+  // @req REQ-TB-4
+  it('redraws the tree when Expand all and Collapse all are used', async () => {
+    load('vscode-all-first.html');
+    // A one-page list completes as single-page; no step is needed.
+    document.querySelector('nav[aria-label="Pagination"]')?.remove();
+    const { wired } = setup('/microsoft/vscode/branches/all', null, true);
+    await settled();
+    expect(wired.view()).toBe('tree-complete');
+
+    const before = tree()!.querySelectorAll('[role="treeitem"]').length;
+    [...document.querySelectorAll<HTMLButtonElement>('.twiggy-toolbar-button')]
+      .find((button) => button.textContent === COPY.expandAll)!
+      .click();
+    await settled();
+    const expanded = tree()!.querySelectorAll('[role="treeitem"]').length;
+    expect(expanded).toBeGreaterThan(before);
+
+    [...document.querySelectorAll<HTMLButtonElement>('.twiggy-toolbar-button')]
+      .find((button) => button.textContent === COPY.collapseAll)!
+      .click();
+    await settled();
+    expect(tree()!.querySelectorAll('[role="treeitem"]').length).toBe(before);
+  });
+
+  // @req REQ-TR-13
+  it('shows a small search result expanded', async () => {
+    load('vscode-search.html');
+    const { wired } = setup('/microsoft/vscode/branches/all?query=OSSA', null, true);
+    await settled();
+
+    expect(wired.view()).toBe('tree-complete');
+    const folder = tree()!.querySelector('[role="treeitem"]');
+    expect(folder?.getAttribute('aria-expanded')).toBe('true');
+    expect(tree()!.querySelectorAll('[role="treeitem"]').length).toBe(2);
+  });
+
+  // @req REQ-BC-15
+  it('restores the starting address and returns there when GitHub’s list is shown', async () => {
+    load('vscode-all-first.html');
+    const { win, wired } = setup('/microsoft/vscode/branches/all', 'vscode-active.html', true);
+    await settled();
+    await advance('vscode-all-end.html');
+    expect(wired.view()).toBe('tree-complete');
+
+    expect(win.history.replaceState).toHaveBeenCalled();
+    expect(win.history.replaceState.mock.calls.at(-1)?.[2]).toBe('/microsoft/vscode/branches/all');
+
+    flipSwitch();
+    await settled();
+    expect(win.location.replace).toHaveBeenCalledWith('/microsoft/vscode/branches/all');
   });
 });

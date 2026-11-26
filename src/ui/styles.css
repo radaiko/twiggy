@@ -96,6 +96,13 @@
   font-weight: 400;
 }
 
+/* REQ-TB-8: the visible reason a disabled switch cannot be used on a later page. */
+.twiggy-switch-hint {
+  color: var(--twiggy-muted-ink);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 /* Muted, and it pushes the buttons to the right edge on its own. */
 .twiggy-scope {
   margin-inline-end: auto;

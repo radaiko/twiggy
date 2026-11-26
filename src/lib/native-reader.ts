@@ -128,11 +128,18 @@ export type Completion =
   | { kind: 'end-signal' }
   | { kind: 'total-match' }
   | { kind: 'confirmed-empty' }
+  | { kind: 'single-page' }
   | { kind: 'unknown' };
 
 // Context readCompletion cannot recover from the document alone: whether the current scope is a
 // paged list at all, and whether the page shown is the first one.
 export type CompletionContext = { pagedView: boolean; firstPage: boolean };
+
+// The page GitHub's own pager put in the address; anything absent or unusable is page 1.
+export function readPage(loc: PageLocation): number {
+  const page = Number(new URLSearchParams(loc.search ?? '').get('page') ?? '1');
+  return Number.isFinite(page) && page > 1 ? page : 1;
+}
 
 export function readCompletion(
   doc: Document,
@@ -146,17 +153,22 @@ export function readCompletion(
     return { kind: 'confirmed-empty' };
   }
 
-  // A4, both signals, only on a paged view and only past the first page. A4's real last page had no
-  // pager at all, but pager absence also describes views that never had one (A5, search, overview)
-  // and the inferred zero-result page 1 of `/all`, which A5's blankslate shows as not paginated. An
-  // absent Next is therefore never proof on page 1, and a disabled Next on page 1 is equally
-  // unproven. `total-match` has no source: A4 records the scoped total as ABSENT, so it is never
-  // returned until a total element is observed and read here.
+  // REQ-BC-12: on page 1 a rendered list with no enabled Next control is the whole scope
+  // GitHub presents. That covers search results, small views and a one-page /all. Zero rows
+  // still need the blankslate above; an empty page is not proof of an empty scope.
   const pager = doc.querySelector(PAGINATION);
-  if (!context.pagedView || context.firstPage) return { kind: 'unknown' };
+  const next = pager?.querySelector(NEXT_PAGE);
+  const nextDisabled = next?.getAttribute('aria-disabled') === 'true';
+  if (context.firstPage) {
+    if (rowCount > 0 && (pager === null || next === null || nextDisabled)) {
+      return { kind: 'single-page' };
+    }
+    return { kind: 'unknown' };
+  }
+
+  // A4, for a paged view past its first page: pager absence is the primary end evidence and a
+  // disabled Next is the secondary one. Views that never had a pager were handled on page 1.
+  if (!context.pagedView) return { kind: 'unknown' };
   if (!pager) return { kind: 'end-signal' };
-  const next = pager.querySelector(NEXT_PAGE);
-  return next?.getAttribute('aria-disabled') === 'true'
-    ? { kind: 'end-signal' }
-    : { kind: 'unknown' };
+  return nextDisabled ? { kind: 'end-signal' } : { kind: 'unknown' };
 }

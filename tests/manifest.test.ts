@@ -14,7 +14,7 @@ type Manifest = {
   permissions?: string[];
   host_permissions?: string[];
   optional_host_permissions?: string[];
-  content_scripts?: { matches?: string[]; js?: string[] }[];
+  content_scripts?: { matches?: string[]; js?: string[]; css?: string[] }[];
 };
 
 const builds = ['.output/chrome-mv3', '.output/firefox-mv3'];
@@ -72,6 +72,11 @@ describe.each(builds)('%s', (build) => {
     expect(script?.matches).toEqual(['https://github.com/*']);
     expect(script?.js?.length).toBeGreaterThan(0);
     for (const file of script?.js ?? []) {
+      expect(existsSync(join(build, file))).toBe(true);
+    }
+    // REQ-EB-5: the UI is unusable without the stylesheet WXT emits beside the script.
+    expect(script?.css?.length).toBeGreaterThan(0);
+    for (const file of script?.css ?? []) {
       expect(existsSync(join(build, file))).toBe(true);
     }
   });

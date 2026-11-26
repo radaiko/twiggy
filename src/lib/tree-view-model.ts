@@ -54,7 +54,7 @@ export function countText(branchCount: number, incomplete: boolean): string {
 }
 
 export function countDescription(branchCount: number, incomplete: boolean): string | null {
-  return incomplete ? `At least ${branchCount} collected branches` : null;
+  return incomplete ? `At least ${branchCount} collected ${branchCount === 1 ? 'branch' : 'branches'}` : null;
 }
 
 const isFolder = (node: TreeNode) => node.children.length > 0;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROWS_PER_LOAD, STALL_LIMIT, STEP_WAIT_MS, createCollector } from '../src/lib/collector';
+import { PAGE_BUDGET, ROWS_PER_LOAD, STALL_LIMIT, STEP_TIMEOUT_RETRIES, STEP_WAIT_MS, createCollector } from '../src/lib/collector';
 import type { Collector, CollectorPorts } from '../src/lib/collector';
 import type { Completion, NativeRow } from '../src/lib/native-reader';
 
@@ -292,9 +292,88 @@ describe('createCollector', () => {
   });
 
   // @req REQ-BC-2
-  it('uses the research A10 constants', () => {
+  it('uses the tuned step constants', () => {
     expect(ROWS_PER_LOAD).toBe(20);
-    expect(STEP_WAIT_MS).toBe(1200);
+    expect(STEP_WAIT_MS).toBe(250);
+    expect(STEP_TIMEOUT_RETRIES).toBe(2);
     expect(STALL_LIMIT).toBe(3);
+  });
+
+  // @req REQ-BC-13
+  it('retries a timed-out step while Next still exists, then ends stalled', async () => {
+    let steps = 0;
+    const collector = createCollector({
+      readRows: () => [row('main')],
+      readCompletion: () => ({ kind: 'unknown' }),
+      step: () => {
+        steps += 1;
+        return Promise.resolve(false);
+      },
+      hasNext: () => true,
+      isManualScroll: () => false,
+      wait: () => Promise.resolve(),
+    });
+    await collector.start();
+    expect(collector.state()).toMatchObject({ status: 'partial', reason: 'stalled' });
+    // The first attempt plus STEP_TIMEOUT_RETRIES retries.
+    expect(steps).toBe(STEP_TIMEOUT_RETRIES + 1);
+  });
+
+  // @req REQ-BC-13
+  it('does not retry when Next is gone', async () => {
+    let steps = 0;
+    const collector = createCollector({
+      readRows: () => [row('main')],
+      readCompletion: () => ({ kind: 'unknown' }),
+      step: () => {
+        steps += 1;
+        return Promise.resolve(false);
+      },
+      hasNext: () => false,
+      isManualScroll: () => false,
+      wait: () => Promise.resolve(),
+    });
+    await collector.start();
+    expect(steps).toBe(1);
+    expect(collector.state()).toMatchObject({ status: 'partial', reason: 'stalled' });
+  });
+
+  // @req REQ-BC-13
+  it('counts rows that arrive during the retry wait as the step', async () => {
+    let read = 0;
+    const collector = createCollector({
+      readRows: () => (read++ === 0 ? [row('main')] : [row('main'), row('next')]),
+      readCompletion: () => ({ kind: read > 1 ? 'single-page' : 'unknown' }),
+      step: () => Promise.resolve(false),
+      hasNext: () => true,
+      isManualScroll: () => false,
+      wait: () => Promise.resolve(),
+    });
+    await collector.start();
+    expect(collector.state()).toMatchObject({ status: 'complete', proof: 'single-page' });
+    expect(collector.state().rows).toHaveLength(2);
+  });
+
+  // @req REQ-BC-16
+  it('stops a single run after PAGE_BUDGET advances and names the budget reason', async () => {
+    let index = 0;
+    let steps = 0;
+    const collector = createCollector({
+      readRows: () => [row(`b${index}`)],
+      readCompletion: () => ({ kind: 'unknown' }),
+      step: () => {
+        index += 1;
+        steps += 1;
+        return Promise.resolve(true);
+      },
+      hasNext: () => true,
+      isManualScroll: () => false,
+      wait: () => Promise.resolve(),
+    });
+    await collector.start();
+    expect(collector.state()).toMatchObject({ status: 'partial', reason: 'page-budget' });
+    expect(steps).toBe(PAGE_BUDGET);
+    // The first page plus the PAGE_BUDGET advances.
+    expect(collector.state().rows).toHaveLength(PAGE_BUDGET + 1);
   });
 });

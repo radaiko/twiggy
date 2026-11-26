@@ -9,9 +9,12 @@ function collector(over: Partial<CollectorState> = {}): CollectorState {
   return { status: 'collecting', rows: ROWS, ...over };
 }
 
-// A session on a recognised branches page with the switch on and collection running.
+// A session on a recognised branches page with the user having turned tree view on.
 function running(): SessionState {
-  return reduce(reduce(initialState(), { type: 'route', branches: true }), { type: 'layout', ok: true });
+  return reduce(
+    reduce(reduce(initialState(), { type: 'route', branches: true }), { type: 'layout', ok: true }),
+    { type: 'switch', on: true },
+  );
 }
 
 function run(...events: SessionEvent[]): SessionState {
@@ -31,7 +34,10 @@ describe('session view states', () => {
   });
 
   it('@req REQ-TS-2 an unrecognised layout is unsupported, and a later recognised one collects', () => {
-    const unsupported = reduce(reduce(initialState(), { type: 'route', branches: true }), { type: 'layout', ok: false });
+    const unsupported = reduce(
+      reduce(reduce(initialState(), { type: 'route', branches: true }), { type: 'switch', on: true }),
+      { type: 'layout', ok: false },
+    );
     expect(viewOf(unsupported)).toBe('unsupported');
 
     const late = reduce(unsupported, { type: 'layout', ok: true });
@@ -39,8 +45,11 @@ describe('session view states', () => {
     expect(late.layout).toBe('ok');
   });
 
-  it('@req REQ-TB-2 a fresh session starts on, collecting', () => {
-    expect(initialState().switchOn).toBe(true);
+  it('@req REQ-TB-2 a fresh session starts off, and turning it on collects', () => {
+    expect(initialState().switchOn).toBe(false);
+    expect(viewOf(reduce(reduce(initialState(), { type: 'route', branches: true }), { type: 'layout', ok: true }))).toBe(
+      'off',
+    );
     expect(viewOf(running())).toBe('collecting');
   });
 
@@ -67,7 +76,7 @@ describe('session view states', () => {
     expect(viewOf(reduce(off, { type: 'scope', scope: { view: 'stale', query: '', key: 'stale|' } }))).toBe('off');
     expect(viewOf(reduce(off, { type: 'route', branches: true }))).toBe('off');
     // A new session is a new page load: the preference does not persist (REQ-TB-5).
-    expect(initialState().switchOn).toBe(true);
+    expect(initialState().switchOn).toBe(false);
   });
 
   it('@req REQ-BC-8 a scope event discards rows and collects again', () => {
@@ -89,9 +98,13 @@ describe('session view states', () => {
 
 describe('session completeness', () => {
   it('@req REQ-BC-5 tree-complete is reachable only from complete with a proof', () => {
-    for (const proof of ['end-signal', 'total-match'] as const) {
+    for (const proof of ['end-signal', 'total-match', 'single-page'] as const) {
       expect(viewOf(run({ type: 'collector', collector: collector({ status: 'complete', proof }) }))).toBe('tree-complete');
     }
+    // A single-page proof over zero rows contradicts the scope and is never complete.
+    expect(
+      viewOf(run({ type: 'collector', collector: collector({ status: 'complete', rows: [], proof: 'single-page' }) })),
+    ).toBe('partial-empty');
     // A complete outcome that claims no proof, and one with zero rows, are never the complete tree.
     expect(viewOf(run({ type: 'collector', collector: collector({ status: 'complete' }) }))).toBe('tree-partial');
     expect(viewOf(run({ type: 'collector', collector: collector({ status: 'complete', rows: [] }) }))).toBe(
@@ -105,7 +118,7 @@ describe('session completeness', () => {
   });
 
   it('@req REQ-BC-5 every non-complete finish is partial, or partial-empty for zero rows', () => {
-    const reasons = ['manual-scroll', 'stop-button', 'stalled'] as const;
+    const reasons = ['manual-scroll', 'stop-button', 'stalled', 'page-budget'] as const;
     for (const reason of reasons) {
       expect(viewOf(run({ type: 'collector', collector: collector({ status: 'partial', reason }) }))).toBe('tree-partial');
       expect(viewOf(run({ type: 'collector', collector: collector({ status: 'partial', reason, rows: [] }) }))).toBe(
