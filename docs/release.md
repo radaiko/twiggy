@@ -54,10 +54,24 @@ one store, run the workflow by hand with the other store unchecked.
 
 ## Cutting a release
 
+The usual flow bumps the version, commits it and pushes the tag:
+
 ```sh
 pnpm version patch -m "chore: release %s"   # or minor / major
 git push --follow-tags
 ```
+
+### The first release (0.1.0)
+
+`package.json` already reads `0.1.0` and that version is on `main`, so there is
+nothing to bump. Tag the commit that carries it:
+
+```sh
+git tag -a v0.1.0 -m "Twiggy 0.1.0"
+git push origin v0.1.0
+```
+
+Use `pnpm version` from the next release onwards.
 
 `pnpm version` writes `package.json`, commits it and creates the tag `v<version>`. The tag
 push starts the release workflow. It:

@@ -59,8 +59,8 @@ the `0.1.1` slot. Build identity before a release comes from the commit, not the
 version. Firefox accepts more, but keep one numeric format that satisfies both
 stores.
 
-The extension is `0.0.0` until the first release; from then on never reuse or
-lower a version that a store or a user already has.
+The first release is `0.1.0`; tag it once the store secrets are in place. Never
+reuse or lower a version that a store or a user already has.
 
 ## Hard constraints
 
