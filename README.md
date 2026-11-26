@@ -21,7 +21,9 @@ Works on `github.com` and on GitHub Enterprise (GHE) instances.
 
 ## Status
 
-Early development — scaffolding only.
+`0.1.0` — first store release. Tree view is opt-in, ships its stylesheet, and groups
+large branch lists in ten-page slices. See [the release guide](docs/release.md) for the
+store pipeline and [the privacy note](docs/privacy.md).
 
 ## Scope
 
