@@ -83,13 +83,17 @@ jobs:
           if-no-files-found: error
 
       - name: Publish to Chrome Web Store
-        if: ${{ inputs.dry_run != true && inputs.chrome != false && env.CLIENT_ID != '' && env.CLIENT_SECRET != '' && env.REFRESH_TOKEN != '' && env.EXTENSION_ID != '' && env.PUBLISHER_ID != '' }}
+        id: chrome
+        # Compare inputs as strings: on a push event they are null, and null
+        # compares equal to false, which silently skipped this step.
+        if: ${{ inputs.dry_run != 'true' && inputs.chrome != 'false' && env.CLIENT_ID != '' && env.CLIENT_SECRET != '' && env.REFRESH_TOKEN != '' && env.EXTENSION_ID != '' && env.PUBLISHER_ID != '' }}
         run: |
           version=$(node -p "require('./package.json').version")
           pnpm exec chrome-webstore-upload --source ".output/twiggy-${version}-chrome.zip"
 
       - name: Submit to Firefox AMO
-        if: ${{ inputs.dry_run != true && inputs.firefox != false && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
+        id: firefox
+        if: ${{ inputs.dry_run != 'true' && inputs.firefox != 'false' && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
         run: |
           version=$(node -p "require('./package.json').version")
           pnpm exec web-ext sign \
@@ -101,10 +105,21 @@ jobs:
             --upload-source-code ".output/twiggy-${version}-sources.zip"
 
       - name: Keep any AMO-signed file
-        if: ${{ always() && inputs.dry_run != true && inputs.firefox != false && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
+        if: ${{ always() && inputs.dry_run != 'true' && inputs.firefox != 'false' && env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: amo-signed
           path: .output/amo/*.xpi
           include-hidden-files: true
           if-no-files-found: warn
+
+      - name: Ensure a tagged release reached both stores
+        # A skipped store step must not leave a green tag run behind.
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          test "${{ steps.chrome.outcome }}" = success || {
+            echo "::error::Chrome Web Store step did not publish"; exit 1;
+          }
+          test "${{ steps.firefox.outcome }}" = success || {
+            echo "::error::AMO step did not submit"; exit 1;
+          }
