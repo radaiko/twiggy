@@ -1,4 +1,10 @@
 {
+  "summary": {
+    "en-US": "Turn GitHub's flat branch list into an Azure DevOps-style folder tree. Opt-in, keyboard friendly, and it never asks for a credential or calls an API."
+  },
+  "categories": [
+    "web-development"
+  ],
   "version": {
     "license": "MIT"
   }
