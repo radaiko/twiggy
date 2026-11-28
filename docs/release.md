@@ -28,9 +28,10 @@ Nothing private is stored in this repository. Store credentials live only in the
 
 1. Create an AMO developer account and generate API credentials at
    <https://addons.mozilla.org/developers/addon/api/key/>.
-2. Set the add-on's listing (summary, description, categories, license, screenshots) in
-   the AMO dashboard. The manifest already declares `twiggy@radaiko.dev`, MIT, and
-   `data_collection_permissions: none`.
+2. Set the add-on's listing (summary, description, categories, screenshots) in
+   the AMO dashboard. The manifest declares `twiggy@radaiko.dev` and
+   `data_collection_permissions: none`; the SPDX license for a listed version comes
+   from `store/amo-metadata.json`, which the workflow passes to `web-ext sign`.
 3. The first `web-ext sign --channel listed` submission creates the version; complete the
    listing in the dashboard if AMO asks for it before review.
 
@@ -103,6 +104,7 @@ first release is `0.1.0`.
   branch glyph. The 128 px file is the store icon.
 - `store/screenshots/*.png` — 1280 × 800 store screenshots.
 - `store/listing.md` — name, summary, description, permission justification and captions.
+- `store/amo-metadata.json` — the SPDX license AMO requires for a listed version.
 
 Chrome also accepts an optional 440 × 280 small promo tile and a 1400 × 560 marquee;
 they are not required for submission.
